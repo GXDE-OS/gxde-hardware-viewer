@@ -9,7 +9,7 @@
 
 #### 安装教程
 
-1. 下载链接：https://gitee.com/ocean123455/hardware-viewer/raw/master/hardware-viewer_1.2_all.deb 
+1. 下载链接：https://gitee.com/ocean123455/hardware-viewer/raw/master/hardware-viewer_1.2.1_all.deb 
 2. 使用 apt 安装
 
 #### 使用说明
