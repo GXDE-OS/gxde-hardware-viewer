@@ -65,7 +65,6 @@ class HardwareManager(QMainWindow):
         self.sidebar.setFixedWidth(self.scaled(180))
         self.sidebar.setStyleSheet(f"""
             QListWidget {{
-                background-color: #f5f5f5;
                 border-right: 1px solid #dcdcdc;
                 padding-top: {self.scaled(10)}px;
             }}
@@ -75,7 +74,6 @@ class HardwareManager(QMainWindow):
                 font-size: {self.scaled(14)}px;
             }}
             QListWidget::item:selected {{
-                background-color: #e0e0e0;
                 color: #2ca7f8;
                 border-left: 3px solid #2ca7f8;
             }}
