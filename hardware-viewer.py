@@ -83,11 +83,11 @@ class HardwareManager(QMainWindow):
         self.add_sidebar_item("系统信息", "system")
         self.add_sidebar_item("处理器", "cpu")
         self.add_sidebar_item("内存", "memory")
-        self.add_sidebar_item("存储", "storage")
+        self.add_sidebar_item("存储", "disk-quota")
         self.add_sidebar_item("网络", "network")
         self.add_sidebar_item("显示", "display")
         self.add_sidebar_item("声音", "sound")
-        self.add_sidebar_item("输入设备", "input")
+        self.add_sidebar_item("输入设备", "dialog-input-devices")
         
         # 创建主内容区域
         self.stack = QStackedWidget()
