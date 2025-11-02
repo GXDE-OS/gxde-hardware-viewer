@@ -65,7 +65,6 @@ class HardwareManager(QMainWindow):
         self.sidebar.setFixedWidth(self.scaled(180))
         self.sidebar.setStyleSheet(f"""
             QListWidget {{
-                background-color: #f5f5f5;
                 border-right: 1px solid #dcdcdc;
                 padding-top: {self.scaled(10)}px;
             }}
@@ -75,7 +74,6 @@ class HardwareManager(QMainWindow):
                 font-size: {self.scaled(14)}px;
             }}
             QListWidget::item:selected {{
-                background-color: #e0e0e0;
                 color: #2ca7f8;
                 border-left: 3px solid #2ca7f8;
             }}
@@ -85,11 +83,11 @@ class HardwareManager(QMainWindow):
         self.add_sidebar_item("系统信息", "system")
         self.add_sidebar_item("处理器", "cpu")
         self.add_sidebar_item("内存", "memory")
-        self.add_sidebar_item("存储", "storage")
+        self.add_sidebar_item("存储", "disk-quota")
         self.add_sidebar_item("网络", "network")
         self.add_sidebar_item("显示", "display")
         self.add_sidebar_item("声音", "sound")
-        self.add_sidebar_item("输入设备", "input")
+        self.add_sidebar_item("输入设备", "dialog-input-devices")
         
         # 创建主内容区域
         self.stack = QStackedWidget()
@@ -1312,7 +1310,7 @@ class HardwareManager(QMainWindow):
                 
             # 内存类型和大小 (从dmidecode获取，需要root权限)
             try:
-                result = subprocess.run(['sudo', 'dmidecode', '-t', '17'], capture_output=True, text=True)
+                result = subprocess.run(['pkexec', 'dmidecode', '-t', '17'], capture_output=True, text=True)
                 output = result.stdout
                 
                 # 提取内存类型
