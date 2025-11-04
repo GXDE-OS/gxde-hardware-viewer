@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QGridLayout, QScrollArea,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
-                            QPushButton, QMenu, QMessageBox, QFileDialog)
+                            QPushButton, QMenu, QMessageBox, QFileDialog, QAbstractItemView)
 from PyQt6.QtCore import Qt, QTimer, QSize
 from PyQt6.QtGui import QIcon, QFont, QFontDatabase
 
@@ -132,14 +132,10 @@ class HardwareManager(QMainWindow):
         menu_button.setFixedSize(self.scaled(30), self.scaled(30))
         menu_button.setStyleSheet("""
             QPushButton {
-                background-color: #f0f0f0;
                 border: 1px solid #ccc;
                 border-radius: 4px;
                 font-size: 16px;
                 font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #e0e0e0;
             }
         """)
         
@@ -147,16 +143,11 @@ class HardwareManager(QMainWindow):
         menu = QMenu()
         menu.setStyleSheet("""
             QMenu {
-                background-color: #f5f5f5;
                 border: 1px solid #ccc;
                 border-radius: 4px;
             }
             QMenu::item {
                 padding: 5px 20px;
-                background-color: transparent;
-            }
-            QMenu::item:selected {
-                background-color: #e0e0e0;
             }
         """)
         
@@ -669,6 +660,7 @@ class HardwareManager(QMainWindow):
         disk_table = QTableWidget()
         disk_table.setColumnCount(5)
         disk_table.setHorizontalHeaderLabels(["设备", "挂载点", "文件系统", "总容量", "可用空间"])
+        disk_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         # 设置表格字体
         font = disk_table.font()
         font.setPointSizeF(font.pointSizeF() * self.scaling_factor)
@@ -721,6 +713,7 @@ class HardwareManager(QMainWindow):
         storage_table.setColumnCount(3)
         storage_table.setHorizontalHeaderLabels(["设备名称", "型号", "驱动模块"])
         storage_table.setRowCount(len(storage_devices))
+        storage_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         for row, device in enumerate(storage_devices):
             storage_table.setRowHeight(row, self.scaled(25))
@@ -773,6 +766,7 @@ class HardwareManager(QMainWindow):
         net_table = QTableWidget()
         net_table.setColumnCount(4)
         net_table.setHorizontalHeaderLabels(["接口名称", "IP地址", "MAC地址", "状态"])
+        net_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         # 设置表格字体
         font = net_table.font()
         font.setPointSizeF(font.pointSizeF() * self.scaling_factor)
@@ -827,6 +821,7 @@ class HardwareManager(QMainWindow):
         net_driver_table.setColumnCount(3)
         net_driver_table.setHorizontalHeaderLabels(["接口名称", "设备型号", "驱动模块"])
         net_driver_table.setRowCount(len(net_devices))
+        net_driver_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         for row, device in enumerate(net_devices):
             net_driver_table.setRowHeight(row, self.scaled(25))

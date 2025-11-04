@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Hardware Viewer
+Name[zh_CN]=硬件查看器
+Name[zh_TW]=硬件查看器
+Comment=View Linux Hardware and drivers
+Comment[zh_CN]=查看Linux硬件信息和驱动状态
+Comment[zh_TW]=查看Linux硬件信息和驅動狀態
+Exec=/usr/bin/hardware-viewer
+Icon=utilities-system-monitor
+Terminal=false
+Type=Application
+Categories=System;Utility;
+Keywords=hardware;drivers;system;Linux;info;
+Keywords[zh_CN]=硬件;驱动;系统信息;Linux;
+Keywords[zh_TW]=硬件;驅動;系統信息;Linux;
