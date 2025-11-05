@@ -1,2 +1,2 @@
-hardware-viewer.desktop  usr/share/applications
-hardware-viewer usr/bin
+gxde-hardware-viewer.desktop  usr/share/applications
+gxde-hardware-viewer usr/bin

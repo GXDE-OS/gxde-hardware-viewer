@@ -51,7 +51,7 @@ class HardwareManager(QMainWindow):
         
     def initUI(self):
         # 设置窗口基本属性
-        self.setWindowTitle("硬件管理器")
+        self.setWindowTitle("GXDE硬件管理器")
         # 使用相对大小而非固定大小
         self.resize(self.scaled(900), self.scaled(600))
         
@@ -303,8 +303,8 @@ class HardwareManager(QMainWindow):
             "版本：2.0 \n"
             "描述：\n"
             "这是一个用于查看系统硬件信息的工具，使用pyqt编写。\n\n"
-            "感谢使用过的使用开源软件\n"
-            "作者：ocean/zeqi\n"
+            "感谢所有使用过的开源软件！\n"
+            "作者：ocean（zeqi）\n"
             "联系：https://gitee.com/ocean123455/hardware-viewer\n\n"
         )
         
