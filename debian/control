@@ -1,4 +1,4 @@
-Source: hardware-viewer
+Source: gxde-hardware-viewer
 Section: utils
 Priority: optional
 Maintainer: ocean <a202128502@163.com>
@@ -8,7 +8,7 @@ Build-Depends:
 Standards-Version: 4.7.2
 Homepage: https://gitee.com/ocean123455/hardware-viewer
 
-Package: hardware-viewer
+Package: gxde-hardware-viewer
 Architecture: all
 Depends:
  ${shlibs:Depends},
