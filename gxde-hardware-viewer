@@ -540,10 +540,8 @@ class HardwareManager(QMainWindow):
                 border: 1px solid #e0e0e0;  /* 浅色边框替代黑色 */
                 border-radius: 4px;        /* 可选：添加圆角更美观 */
                 padding: 0 {self.scaled(6)}px;
-                background-color: #f5f5f5; /* 背景色与界面协调 */
             }}
             QProgressBar::chunk {{
-                background-color: #2ca7f8; /* 进度条颜色保持不变 */
                 border-radius: 2px;
             }}
         """)
@@ -572,10 +570,8 @@ class HardwareManager(QMainWindow):
                     border: 1px solid #e0e0e0;
                     border-radius: 4px;
                     padding: 0 {self.scaled(6)}px;
-                    background-color: #f5f5f5;
                 }}
                 QProgressBar::chunk {{
-                    background-color: #2ca7f8;
                     border-radius: 2px;
                 }}
             """)
@@ -617,7 +613,6 @@ class HardwareManager(QMainWindow):
                 border: 1px solid #e0e0e0;
                 border-radius: 4px;
                 padding: 0 {self.scaled(6)}px;
-                background-color: #f5f5f5;
             }}
             QProgressBar::chunk {{
                 background-color: #4CAF50; /* 内存进度条用绿色区分 */
@@ -686,10 +681,8 @@ class HardwareManager(QMainWindow):
                 border: 1px solid #e0e0e0;
                 border-radius: 4px;
                 padding: 0 {self.scaled(6)}px;
-                background-color: #f5f5f5;
             }}
             QProgressBar::chunk {{
-                background-color: #FF9800; /* 交换分区用橙色区分 */
                 border-radius: 2px;
             }}
         """)
