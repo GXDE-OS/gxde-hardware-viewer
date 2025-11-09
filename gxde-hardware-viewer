@@ -1,5 +1,6 @@
-#!/usr/bin/env python3
+#!//bin/env python3
 # -*- coding: utf-8 -*-
+
 import sys
 import platform
 import psutil
@@ -114,8 +115,12 @@ class HardwareManager(QMainWindow):
         # 默认选中第一个项目
         self.sidebar.setCurrentRow(0)
         
+
+        
         # 添加右上角菜单按钮
         self.create_menu_button()
+        
+
         
         # 应用字体缩放
         self.apply_font_scaling()
@@ -194,8 +199,7 @@ class HardwareManager(QMainWindow):
                 '逻辑核心': psutil.cpu_count(logical=True) or 0,
                 '当前频率': f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else "未知",
                 '最大频率': f"{cpu_freq.max:.2f} MHz" if cpu_freq and cpu_freq.max else "未知",
-                '最小频率': f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else "未知",
-                '驱动信息': self.get_cpu_driver_info()
+                '最小频率': f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else "未知"
             }
             
             # 内存信息
@@ -211,8 +215,7 @@ class HardwareManager(QMainWindow):
                 '交换分区总容量': self.format_size(swap.total),
                 '交换分区已使用': self.format_size(swap.used),
                 '交换分区空闲': self.format_size(swap.free),
-                '交换分区使用率': f"{swap.percent}%",
-                '内存硬件与驱动': self.get_memory_hardware_info()
+                '交换分区使用率': f"{swap.percent}%"
             }
             
             # 磁盘信息
@@ -232,7 +235,6 @@ class HardwareManager(QMainWindow):
                 except PermissionError:
                     continue
             info['磁盘信息'] = disks
-            info['存储设备与驱动'] = self.get_storage_devices_info()
             
             # 网络信息
             net_if_addrs = psutil.net_if_addrs()
@@ -265,15 +267,13 @@ class HardwareManager(QMainWindow):
                     '状态': status
                 })
             info['网络信息'] = network_interfaces
-            info['网络设备与驱动'] = self.get_network_devices_info()
             
             # 显示信息
             info['显示信息'] = {
                 '显卡': self.get_gpu_info(),
                 '分辨率': self.get_screen_resolution(),
                 '颜色深度': self.get_color_depth(),
-                '刷新率': self.get_refresh_rate(),
-                '驱动信息': self.get_display_driver_info()
+                '刷新率': self.get_refresh_rate()
             }
             
             # 获取桌面路径
@@ -300,11 +300,11 @@ class HardwareManager(QMainWindow):
         """显示关于对话框"""
         about_text = (
             "GXDE硬件管理器\n\n"
-            "版本：2.1.1 \n"
+            "版本：2.0 \n"
             "描述：\n"
             "这是一个用于查看系统硬件信息的工具，使用pyqt编写。\n\n"
-            "感谢所有使用过的开源软件！\n"
-            "作者：ocean（zeqi）\n"
+            "感谢使用过所有的开源软件\n"
+            "作者：ocean/zeqi\n"
             "联系：https://gitee.com/ocean123455/hardware-viewer\n\n"
         )
         
@@ -373,21 +373,7 @@ class HardwareManager(QMainWindow):
         layout.addWidget(widget)
         group.setLayout(layout)
         return group
-    
-    def get_os_version(self):
-        """获取操作系统版本信息"""
-        try:
-            with open('/etc/os-release', 'r') as f:
-                for line in f:
-                    if line.startswith('PRETTY_NAME='):
-                        # 去除引号和换行符
-                        return line.split('=')[1].strip().strip('"')
-            return "未知系统版本"
-        except FileNotFoundError:
-            return "无法获取系统版本"
-        except Exception as e:
-            return f"获取失败: {str(e)}"
-            
+        
     def create_system_info_page(self):
         """创建系统信息页面"""
         widget = QWidget()
@@ -406,7 +392,7 @@ class HardwareManager(QMainWindow):
         # 获取系统信息
         uname = platform.uname()
         
-        sys_layout.addRow("操作系统:", QLabel(self.get_os_version()))
+        sys_layout.addRow("操作系统:", QLabel(f"{uname.system} {uname.release} (GXDE)"))
         sys_layout.addRow("主机名:", QLabel(uname.node))
         sys_layout.addRow("内核版本:", QLabel(uname.version))
         sys_layout.addRow("系统架构:", QLabel(uname.machine))
@@ -524,7 +510,7 @@ class HardwareManager(QMainWindow):
         driver_widget.setLayout(driver_layout)
         layout.addWidget(self.create_group_box("CPU驱动信息", driver_widget))
         
-        # CPU使用率 - 修复文字显示+去除黑色描边
+        # CPU使用率
         cpu_usage = QWidget()
         cpu_usage_layout = QVBoxLayout()
         cpu_usage_layout.setSpacing(self.scaled(8))
@@ -532,22 +518,9 @@ class HardwareManager(QMainWindow):
         # 总体使用率
         self.cpu_total_bar = QProgressBar()
         self.cpu_total_bar.setFixedHeight(self.scaled(25))
-        self.cpu_total_bar.setMinimumWidth(self.scaled(220))  # 增加最小宽度
-        self.cpu_total_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)  # 文字居中
-        # 修复样式：去除边框+保留内边距，使用与界面协调的浅色边框（可根据需求调整）
-        self.cpu_total_bar.setStyleSheet(f"""
-            QProgressBar {{
-                border: 1px solid #e0e0e0;  /* 浅色边框替代黑色 */
-                border-radius: 4px;        /* 可选：添加圆角更美观 */
-                padding: 0 {self.scaled(6)}px;
-            }}
-            QProgressBar::chunk {{
-                border-radius: 2px;
-            }}
-        """)
         cpu_percent = psutil.cpu_percent(interval=0.1)
         self.cpu_total_bar.setValue(int(cpu_percent))
-        self.cpu_total_bar.setFormat(f"总使用率: {self.cpu_total_bar.value()}%")  # 简化格式
+        self.cpu_total_bar.setFormat(f"总体使用率: {self.cpu_total_bar.value()}%")
         cpu_usage_layout.addWidget(self.cpu_total_bar)
         
         # 各核心使用率
@@ -562,21 +535,8 @@ class HardwareManager(QMainWindow):
         for i, percent in enumerate(psutil.cpu_percent(percpu=True, interval=0.1)):
             core_bar = QProgressBar()
             core_bar.setFixedHeight(self.scaled(25))
-            core_bar.setMinimumWidth(self.scaled(180))  # 核心进度条最小宽度
-            core_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)  # 文字居中
-            # 统一样式：去除黑色描边
-            core_bar.setStyleSheet(f"""
-                QProgressBar {{
-                    border: 1px solid #e0e0e0;
-                    border-radius: 4px;
-                    padding: 0 {self.scaled(6)}px;
-                }}
-                QProgressBar::chunk {{
-                    border-radius: 2px;
-                }}
-            """)
             core_bar.setValue(int(percent))
-            core_bar.setFormat(f"核{i}: {core_bar.value()}%")  # 简化格式（核X代替核心X）
+            core_bar.setFormat(f"核心 {i}: {core_bar.value()}%")
             self.core_usage_layout.addWidget(core_bar, i // 2, i % 2)
             self.cpu_core_bars.append(core_bar)
         
@@ -600,28 +560,13 @@ class HardwareManager(QMainWindow):
         mem_layout = QVBoxLayout()
         mem_layout.setSpacing(self.scaled(8))
         
-        # 总内存信息 - 修复文字显示+去除黑色描边
+        # 总内存信息
         mem = psutil.virtual_memory()
         
         self.mem_total_bar = QProgressBar()
         self.mem_total_bar.setFixedHeight(self.scaled(25))
-        self.mem_total_bar.setMinimumWidth(self.scaled(250))  # 增加最小宽度
-        self.mem_total_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)  # 文字居中
-        # 统一样式
-        self.mem_total_bar.setStyleSheet(f"""
-            QProgressBar {{
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                padding: 0 {self.scaled(6)}px;
-            }}
-            QProgressBar::chunk {{
-                background-color: #4CAF50; /* 内存进度条用绿色区分 */
-                border-radius: 2px;
-            }}
-        """)
         self.mem_total_bar.setValue(int(mem.percent))
-        # 简化格式，保留关键信息
-        self.mem_total_bar.setFormat(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)}/{self.format_size(mem.total)})")
+        self.mem_total_bar.setFormat(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)} / {self.format_size(mem.total)})")
         mem_layout.addWidget(self.mem_total_bar)
         
         # 详细内存信息
@@ -664,7 +609,7 @@ class HardwareManager(QMainWindow):
         mem_driver_widget.setLayout(mem_driver_layout)
         layout.addWidget(self.create_group_box("内存硬件与驱动", mem_driver_widget))
         
-        # 交换分区信息 - 修复文字显示+去除黑色描边
+        # 交换分区信息
         swap_info = QWidget()
         swap_layout = QVBoxLayout()
         swap_layout.setSpacing(self.scaled(8))
@@ -673,22 +618,8 @@ class HardwareManager(QMainWindow):
         
         self.swap_bar = QProgressBar()
         self.swap_bar.setFixedHeight(self.scaled(25))
-        self.swap_bar.setMinimumWidth(self.scaled(250))  # 增加最小宽度
-        self.swap_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)  # 文字居中
-        # 统一样式，用橙色区分交换分区
-        self.swap_bar.setStyleSheet(f"""
-            QProgressBar {{
-                border: 1px solid #e0e0e0;
-                border-radius: 4px;
-                padding: 0 {self.scaled(6)}px;
-            }}
-            QProgressBar::chunk {{
-                border-radius: 2px;
-            }}
-        """)
         self.swap_bar.setValue(int(swap.percent))
-        # 简化格式
-        self.swap_bar.setFormat(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)}/{self.format_size(swap.total)})")
+        self.swap_bar.setFormat(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)} / {self.format_size(swap.total)})")
         swap_layout.addWidget(self.swap_bar)
         
         # 交换分区详细信息
@@ -941,25 +872,24 @@ class HardwareManager(QMainWindow):
         layout.setSpacing(self.scaled(10))
         
         # 显示设备信息
-        display_info = QWidget()
+        self.display_info = QWidget()
         display_layout = QFormLayout()
         display_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
         display_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         display_layout.setHorizontalSpacing(self.scaled(15))
         display_layout.setVerticalSpacing(self.scaled(8))
         
+        # 获取显卡信息
         gpu_info = self.get_gpu_info()
-        resolution = self.get_screen_resolution()
-        color_depth = self.get_color_depth()
-        refresh_rate = self.get_refresh_rate()
+        self.resolution_label = QLabel(self.get_screen_resolution())
         
         display_layout.addRow("显卡:", QLabel(gpu_info))
-        display_layout.addRow("分辨率:", QLabel(resolution))
-        display_layout.addRow("颜色深度:", QLabel(color_depth))
-        display_layout.addRow("刷新率:", QLabel(refresh_rate))
+        display_layout.addRow("分辨率:", self.resolution_label)
+        display_layout.addRow("颜色深度:", QLabel(self.get_color_depth()))
+        display_layout.addRow("刷新率:", QLabel(self.get_refresh_rate()))
         
-        display_info.setLayout(display_layout)
-        layout.addWidget(self.create_group_box("显示设备信息", display_info))
+        self.display_info.setLayout(display_layout)
+        layout.addWidget(self.create_group_box("显示设备", self.display_info))
         
         # 显示驱动信息
         display_drivers = self.get_display_driver_info()
@@ -980,33 +910,60 @@ class HardwareManager(QMainWindow):
         return widget
         
     def create_sound_page(self):
-        """创建声音信息页面"""
+        """创建声音设备页面"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
         layout.setSpacing(self.scaled(10))
         
         # 声音设备信息
-        sound_devices = self.get_sound_devices_info()
+        sound_info = self.get_sound_devices_info()
         sound_widget = QWidget()
         sound_layout = QVBoxLayout(sound_widget)
+        sound_layout.setSpacing(self.scaled(6))
         
-        sound_table = QTableWidget()
-        sound_table.setColumnCount(3)
-        sound_table.setHorizontalHeaderLabels(["设备名称", "类型", "驱动模块"])
-        sound_table.setRowCount(len(sound_devices))
-        sound_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        # 输出设备
+        label1 = QLabel("音频输出设备:")
+        font = label1.font()
+        font.setBold(True)
+        label1.setFont(font)
+        sound_layout.addWidget(label1)
         
-        for row, device in enumerate(sound_devices):
-            sound_table.setRowHeight(row, self.scaled(25))
-            sound_table.setItem(row, 0, QTableWidgetItem(device.get('name', '未知')))
-            sound_table.setItem(row, 1, QTableWidgetItem(device.get('type', '未知')))
-            sound_table.setItem(row, 2, QTableWidgetItem(device.get('driver', '未知')))
+        for device in sound_info.get('output', []):
+            sound_layout.addWidget(QLabel(f"  - {device['name']} (驱动: {device['driver']})"))
         
-        sound_table.horizontalHeader().setStretchLastSection(True)
-        sound_layout.addWidget(sound_table)
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        sound_layout.addWidget(line)
         
+        # 输入设备
+        label2 = QLabel("音频输入设备:")
+        font = label2.font()
+        font.setBold(True)
+        label2.setFont(font)
+        sound_layout.addWidget(label2)
+        
+        for device in sound_info.get('input', []):
+            sound_layout.addWidget(QLabel(f"  - {device['name']} (驱动: {device['driver']})"))
+        
+        sound_widget.setLayout(sound_layout)
         layout.addWidget(self.create_group_box("声音设备与驱动", sound_widget))
+        
+        # 音频驱动信息
+        audio_drivers = self.get_audio_driver_info()
+        driver_widget = QWidget()
+        driver_layout = QFormLayout()
+        driver_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+        driver_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        driver_layout.setHorizontalSpacing(self.scaled(15))
+        driver_layout.setVerticalSpacing(self.scaled(8))
+        
+        for key, value in audio_drivers.items():
+            driver_layout.addRow(f"{key}:", QLabel(value))
+        
+        driver_widget.setLayout(driver_layout)
+        layout.addWidget(self.create_group_box("音频驱动详情", driver_widget))
         
         layout.addStretch()
         return widget
@@ -1022,120 +979,102 @@ class HardwareManager(QMainWindow):
         input_devices = self.get_input_devices_info()
         input_widget = QWidget()
         input_layout = QVBoxLayout(input_widget)
+        input_layout.setSpacing(self.scaled(6))
         
-        input_table = QTableWidget()
-        input_table.setColumnCount(3)
-        input_table.setHorizontalHeaderLabels(["设备名称", "类型", "驱动模块"])
-        input_table.setRowCount(len(input_devices))
-        input_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        # 键盘设备
+        if input_devices.get('keyboard'):
+            label1 = QLabel("键盘:")
+            font = label1.font()
+            font.setBold(True)
+            label1.setFont(font)
+            input_layout.addWidget(label1)
+            
+            for device in input_devices['keyboard']:
+                input_layout.addWidget(QLabel(f"  - {device['name']} (驱动: {device['driver']})"))
+            
+            line1 = QFrame()
+            line1.setFrameShape(QFrame.Shape.HLine)
+            line1.setFrameShadow(QFrame.Shadow.Sunken)
+            input_layout.addWidget(line1)
         
-        for row, device in enumerate(input_devices):
-            input_table.setRowHeight(row, self.scaled(25))
-            input_table.setItem(row, 0, QTableWidgetItem(device.get('name', '未知')))
-            input_table.setItem(row, 1, QTableWidgetItem(device.get('type', '未知')))
-            input_table.setItem(row, 2, QTableWidgetItem(device.get('driver', '未知')))
+        # 鼠标设备
+        if input_devices.get('mouse'):
+            label2 = QLabel("鼠标:")
+            font = label2.font()
+            font.setBold(True)
+            label2.setFont(font)
+            input_layout.addWidget(label2)
+            
+            for device in input_devices['mouse']:
+                input_layout.addWidget(QLabel(f"  - {device['name']} (驱动: {device['driver']})"))
+            
+            line2 = QFrame()
+            line2.setFrameShape(QFrame.Shape.HLine)
+            line2.setFrameShadow(QFrame.Shadow.Sunken)
+            input_layout.addWidget(line2)
         
-        input_table.horizontalHeader().setStretchLastSection(True)
-        input_layout.addWidget(input_table)
+        # 其他输入设备
+        if input_devices.get('other'):
+            label3 = QLabel("其他输入设备:")
+            font = label3.font()
+            font.setBold(True)
+            label3.setFont(font)
+            input_layout.addWidget(label3)
+            
+            for device in input_devices['other']:
+                input_layout.addWidget(QLabel(f"  - {device['name']} (驱动: {device['driver']})"))
         
+        input_widget.setLayout(input_layout)
         layout.addWidget(self.create_group_box("输入设备与驱动", input_widget))
         
         layout.addStretch()
         return widget
     
-    # 硬件信息获取方法
-    def get_uptime(self):
-        """获取系统启动时间"""
-        boot_time = datetime.fromtimestamp(psutil.boot_time())
-        now = datetime.now()
-        delta = now - boot_time
-        
-        days = delta.days
-        hours, remainder = divmod(delta.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        
-        return f"{days}天 {hours}时 {minutes}分 {seconds}秒"
-        
-    def format_size(self, size_bytes):
-        """格式化字节大小为人类可读形式"""
-        units = ['B', 'KB', 'MB', 'GB', 'TB']
-        size = size_bytes
-        unit_index = 0
-        
-        while size >= 1024 and unit_index < len(units) - 1:
-            size /= 1024
-            unit_index += 1
-            
-        return f"{size:.2f} {units[unit_index]}"
-        
-    def get_cpu_model(self):
-        """获取CPU型号"""
-        try:
-            with open('/proc/cpuinfo', 'r') as f:
-                for line in f:
-                    if line.strip().startswith('model name'):
-                        return line.split(':')[1].strip()
-            return "未知"
-        except:
-            return "未知"
-            
-    def get_kernel_modules(self):
-        """获取加载的内核模块"""
-        try:
-            result = subprocess.run(['lsmod'], capture_output=True, text=True)
-            modules = result.stdout.splitlines()[1:10]  # 只显示前10个
-            return "\n".join([line.split()[0] for line in modules])
-        except:
-            return "无法获取内核模块信息"
-            
     def update_cpu_info(self):
         """更新CPU信息"""
-        # 更新总体使用率
+        # 更新CPU总体使用率
         if self.cpu_total_bar:
             cpu_percent = psutil.cpu_percent(interval=0.1)
             self.cpu_total_bar.setValue(int(cpu_percent))
-            self.cpu_total_bar.setFormat(f"总使用率: {self.cpu_total_bar.value()}%")  # 同步简化格式
+            self.cpu_total_bar.setFormat(f"总体使用率: {int(cpu_percent)}%")
         
         # 更新各核心使用率
         if self.cpu_core_bars:
             core_percents = psutil.cpu_percent(percpu=True, interval=0.1)
-            for i, percent in enumerate(core_percents):
-                if i < len(self.cpu_core_bars):
-                    self.cpu_core_bars[i].setValue(int(percent))
-                    self.cpu_core_bars[i].setFormat(f"核{i}: {self.cpu_core_bars[i].value()}%")  # 同步简化格式
+            for i, (bar, percent) in enumerate(zip(self.cpu_core_bars, core_percents)):
+                bar.setValue(int(percent))
+                bar.setFormat(f"核心 {i}: {int(percent)}%")
         
         # 更新当前频率
         if hasattr(self, 'cpu_current_freq_label'):
             cpu_freq = psutil.cpu_freq()
-            current_freq = f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else "未知"
-            self.cpu_current_freq_label.setText(current_freq)
-            
+            if cpu_freq and cpu_freq.current:
+                self.cpu_current_freq_label.setText(f"{cpu_freq.current:.2f} MHz")
+    
     def update_memory_info(self):
         """更新内存信息"""
-        # 更新内存使用情况
+        # 更新内存使用率
         if self.mem_total_bar:
             mem = psutil.virtual_memory()
             self.mem_total_bar.setValue(int(mem.percent))
-            # 同步简化格式
-            self.mem_total_bar.setFormat(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)}/{self.format_size(mem.total)})")
+            self.mem_total_bar.setFormat(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)} / {self.format_size(mem.total)})")
             
-            if hasattr(self, 'mem_used_label'):
-                self.mem_used_label.setText(self.format_size(mem.used))
-                self.mem_free_label.setText(self.format_size(mem.free))
-                self.mem_available_label.setText(self.format_size(mem.available))
-                self.mem_cache_label.setText(self.format_size(mem.total - mem.used - mem.free))
+            # 更新内存详细信息
+            self.mem_used_label.setText(self.format_size(mem.used))
+            self.mem_free_label.setText(self.format_size(mem.free))
+            self.mem_available_label.setText(self.format_size(mem.available))
+            self.mem_cache_label.setText(self.format_size(mem.total - mem.used - mem.free))
         
         # 更新交换分区信息
         if self.swap_bar:
             swap = psutil.swap_memory()
             self.swap_bar.setValue(int(swap.percent))
-            # 同步简化格式
-            self.swap_bar.setFormat(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)}/{self.format_size(swap.total)})")
+            self.swap_bar.setFormat(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)} / {self.format_size(swap.total)})")
             
-            if hasattr(self, 'swap_used_label'):
-                self.swap_used_label.setText(self.format_size(swap.used))
-                self.swap_free_label.setText(self.format_size(swap.free))
-                
+            # 更新交换分区详细信息
+            self.swap_used_label.setText(self.format_size(swap.used))
+            self.swap_free_label.setText(self.format_size(swap.free))
+    
     def update_network_info(self):
         """更新网络信息"""
         if self.net_io_labels:
@@ -1146,7 +1085,7 @@ class HardwareManager(QMainWindow):
             self.net_io_labels['packets_sent'].setText(str(net_counter.packets_sent))
             self.net_io_labels['errin'].setText(str(net_counter.errin))
             self.net_io_labels['errout'].setText(str(net_counter.errout))
-            
+    
     def update_disk_io_info(self):
         """更新磁盘IO信息"""
         if self.disk_io_labels:
@@ -1155,407 +1094,546 @@ class HardwareManager(QMainWindow):
             self.disk_io_labels['write_count'].setText(str(disk_io.write_count))
             self.disk_io_labels['read_bytes'].setText(self.format_size(disk_io.read_bytes))
             self.disk_io_labels['write_bytes'].setText(self.format_size(disk_io.write_bytes))
-            
+    
     def update_uptime(self):
-        """更新系统启动时间"""
+        """更新系统运行时间"""
         if hasattr(self, 'uptime_label'):
             self.uptime_label.setText(self.get_uptime())
-            
+    
     def update_display_info(self):
         """更新显示信息"""
-        # 可以在这里添加显示信息的实时更新逻辑
-        pass
-        
+        if hasattr(self, 'resolution_label'):
+            self.resolution_label.setText(self.get_screen_resolution())
+    
+    def get_cpu_model(self):
+        """获取CPU型号（通过读取/proc/cpuinfo）"""
+        try:
+            with open('/proc/cpuinfo', 'r') as f:
+                for line in f:
+                    if line.strip().startswith('model name'):
+                        return line.split(':')[1].strip()
+            return platform.processor() or "未知处理器"
+        except Exception as e:
+            print(f"获取CPU信息失败: {e}")
+            return platform.processor() or "未知处理器"
+    
     def get_gpu_info(self):
-        """获取GPU信息"""
+        """获取显卡信息（通过lspci命令）"""
         try:
-            result = subprocess.run(['lspci'], capture_output=True, text=True)
-            gpus = []
-            for line in result.stdout.splitlines():
-                if 'VGA' in line or '3D' in line or 'Display' in line:
-                    gpus.append(line.split(': ', 2)[-1])
-            return '\n'.join(gpus) if gpus else "未知"
-        except:
-            return "无法获取GPU信息"
+            # 调用lspci命令获取PCI设备信息
+            result = subprocess.run(['lspci'], capture_output=True, text=True, check=True)
+            output = result.stdout
             
+            # 过滤出VGA兼容控制器（显卡）信息
+            gpu_lines = [line for line in output.split('\n') if 'VGA compatible controller' in line]
+            
+            if gpu_lines:
+                # 提取并清理显卡名称
+                gpu_info = [line.split(': ', 2)[-1] for line in gpu_lines]
+                return '; '.join(gpu_info)
+            else:
+                return "未知显卡（未检测到VGA设备）"
+        except Exception as e:
+            print(f"获取显卡信息失败: {e}")
+            return "未知显卡（请确保lspci命令可用）"
+    
     def get_screen_resolution(self):
-        """获取屏幕分辨率"""
+        """获取屏幕分辨率（通过xrandr命令，更适合Linux桌面环境）"""
         try:
-            screen = QApplication.primaryScreen()
-            geometry = screen.geometry()
-            return f"{geometry.width()} x {geometry.height()}"
-        except:
-            return "未知"
+            # 尝试使用xrandr命令获取分辨率（Linux系统）
+            result = subprocess.run(['xrandr'], capture_output=True, text=True)
+            output = result.stdout
             
+            # 查找当前活跃的显示模式
+            for line in output.split('\n'):
+                if '*' in line and '+' in line:  # 包含*表示当前分辨率，+表示首选分辨率
+                    parts = line.strip().split()
+                    for part in parts:
+                        if 'x' in part and part.replace('x', '').isdigit():
+                            # 同时获取显示器名称
+                            display_name = None
+                            for l in output.split('\n'):
+                                if ' connected' in l and part in output.split('\n')[output.split('\n').index(l)+1]:
+                                    display_name = l.split()[0]
+                                    break
+                            if display_name:
+                                return f"{display_name}: {part}"
+                            else:
+                                return part
+            
+            # 如果xrandr失败，使用Qt的方法作为备选
+            screen_geometry = QApplication.primaryScreen().geometry()
+            return f"{screen_geometry.width()} x {screen_geometry.height()}"
+        except Exception as e:
+            print(f"获取分辨率失败: {e}")
+            try:
+                # 最后的备选方案
+                screen_geometry = QApplication.primaryScreen().geometry()
+                return f"{screen_geometry.width()} x {screen_geometry.height()}"
+            except:
+                return "未知分辨率"
+    
     def get_color_depth(self):
         """获取颜色深度"""
         try:
-            screen = QApplication.primaryScreen()
-            depth = screen.depth()
-            return f"{depth} 位"
-        except:
-            return "未知"
+            # 通过xwininfo命令获取颜色深度
+            result = subprocess.run(['xwininfo', '-root'], capture_output=True, text=True)
+            output = result.stdout
             
+            for line in output.split('\n'):
+                if 'Depth' in line:
+                    return f"{line.split(':')[1].strip()} 位"
+            
+            # 备选方案
+            return "32 位"
+        except:
+            return "32 位"
+    
     def get_refresh_rate(self):
         """获取刷新率"""
         try:
-            screen = QApplication.primaryScreen()
-            refresh_rate = screen.refreshRate()
-            return f"{refresh_rate} Hz" if refresh_rate > 0 else "未知"
+            # 通过xrandr命令获取刷新率
+            result = subprocess.run(['xrandr'], capture_output=True, text=True)
+            output = result.stdout
+            
+            for line in output.split('\n'):
+                if '*' in line:  # 当前活跃模式
+                    parts = line.strip().split()
+                    for part in parts:
+                        if 'Hz' in part:
+                            return part
+            
+            # 备选方案
+            return "60 Hz"
+        except:
+            return "60 Hz"
+        
+    def format_size(self, size):
+        """格式化字节大小为人类可读的形式"""
+        if size <= 0:
+            return "0 B"
+        units = ['B', 'KB', 'MB', 'GB', 'TB']
+        unit_index = 0
+        while size >= 1024 and unit_index < len(units) - 1:
+            size /= 1024
+            unit_index += 1
+        return f"{size:.2f} {units[unit_index]}"
+        
+    def get_uptime(self):
+        """获取系统运行时间"""
+        try:
+            uptime_seconds = psutil.boot_time()
+            boot_time = datetime.fromtimestamp(uptime_seconds)
+            now = datetime.now()
+            delta = now - boot_time
+            
+            days = delta.days
+            hours, remainder = divmod(delta.seconds, 3600)
+            minutes, _ = divmod(remainder, 60)
+            
+            return f"{days}天 {hours}时 {minutes}分"
         except:
             return "未知"
+    
+    # 新增驱动和设备信息相关函数
+    def get_kernel_modules(self):
+        """获取加载的内核模块"""
+        try:
+            result = subprocess.run(['lsmod'], capture_output=True, text=True)
+            output = result.stdout
             
-    # 驱动信息获取方法 - 核心修复部分
+            # 只取前10个模块
+            lines = output.split('\n')[1:11]  # 跳过表头
+            modules = [line.split()[0] for line in lines if line.strip()]
+            return ", ".join(modules) + " (仅显示前10个)"
+        except Exception as e:
+            print(f"获取内核模块失败: {e}")
+            return "无法获取内核模块信息"
+    
     def get_cpu_driver_info(self):
         """获取CPU驱动信息"""
+        info = {}
         try:
-            drivers = {}
+            # 获取CPU厂商信息
+            with open('/proc/cpuinfo', 'r') as f:
+                for line in f:
+                    if line.strip().startswith('vendor_id'):
+                        info['厂商'] = line.split(':')[1].strip()
+                        break
             
-            # 获取CPU微码信息
-            if os.path.exists('/proc/cpuinfo'):
+            # 获取CPU微码版本
+            try:
                 with open('/proc/cpuinfo', 'r') as f:
                     for line in f:
                         if line.strip().startswith('microcode'):
-                            drivers['微码版本'] = line.split(':')[1].strip()
+                            info['微码版本'] = line.split(':')[1].strip()
                             break
+            except:
+                info['微码版本'] = "未知"
             
-            # 获取CPU频率调节驱动
-            cpufreq_drivers = []
-            if os.path.exists('/sys/devices/system/cpu/cpufreq/'):
-                for driver in os.listdir('/sys/devices/system/cpu/cpufreq/'):
-                    if driver.startswith('policy'):
-                        try:
-                            with open(f'/sys/devices/system/cpu/cpufreq/{driver}/scaling_driver', 'r') as f:
-                                cpufreq_drivers.append(f.read().strip())
-                        except:
-                            continue
-            if cpufreq_drivers:
-                drivers['频率调节驱动'] = ', '.join(list(set(cpufreq_drivers)))
-            
-            # 获取CPU电源管理驱动
-            if os.path.exists('/sys/devices/system/cpu/cpuidle/current_driver'):
-                with open('/sys/devices/system/cpu/cpuidle/current_driver', 'r') as f:
-                    drivers['电源管理驱动'] = f.read().strip()
-            
-            if not drivers:
-                drivers['状态'] = '未检测到特定驱动信息'
+            # 获取CPU调度器
+            try:
+                with open('/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', 'r') as f:
+                    info['调度器'] = f.read().strip()
+            except:
+                info['调度器'] = "未知"
                 
-            return drivers
-        except Exception as e:
-            return {'错误': f'无法获取CPU驱动信息: {str(e)}'}
+            # 获取CPU驱动模块
+            result = subprocess.run(['lsmod'], capture_output=True, text=True)
+            cpu_modules = [line.split()[0] for line in result.stdout.split('\n') 
+                         if 'cpu' in line or 'processor' in line or 'intel' in line or 'amd' in line]
+            info['相关驱动模块'] = ", ".join(cpu_modules[:5])
             
+        except Exception as e:
+            print(f"获取CPU驱动信息失败: {e}")
+            info['驱动信息'] = "无法获取"
+        
+        return info
+    
     def get_memory_hardware_info(self):
-        """获取内存硬件与驱动信息"""
+        """获取内存硬件信息"""
+        info = {}
         try:
-            mem_info = {}
-            
-            # 获取内存总量（已在前面显示，这里补充其他信息）
-            mem = psutil.virtual_memory()
-            mem_info['总容量'] = self.format_size(mem.total)
-            
-            # 获取内存控制器信息
-            result = subprocess.run(['lspci | grep -i memory'], shell=True, capture_output=True, text=True)
-            if result.stdout:
-                mem_info['内存控制器'] = result.stdout.splitlines()[0].split(': ', 2)[-1]
-            
-            # 获取内存驱动/控制器模块
-            result = subprocess.run(['lsmod | grep -i "ddr\|memory\|ram"'], shell=True, capture_output=True, text=True)
-            if result.stdout:
-                modules = [line.split()[0] for line in result.stdout.splitlines()]
-                mem_info['相关驱动模块'] = ', '.join(modules)
-            
-            # 检查内存插槽信息
-            if os.path.exists('/proc/meminfo'):
-                with open('/proc/meminfo', 'r') as f:
-                    for line in f:
-                        if line.startswith('MemTotal:'):
-                            continue  # 已显示
-                        if line.startswith('MemFree:'):
-                            continue  # 已显示
-                        if line.startswith('MemAvailable:'):
-                            continue  # 已显示
-                        if line.startswith('HugePages_Total:'):
-                            mem_info['大页总数'] = line.split()[1]
-            
-            if not mem_info:
-                mem_info['状态'] = '未检测到内存硬件信息'
+            # 内存控制器信息
+            result = subprocess.run(['lspci'], capture_output=True, text=True)
+            output = result.stdout
+            mem_ctrl_lines = [line for line in output.split('\n') if 'Memory controller' in line]
+            if mem_ctrl_lines:
+                info['内存控制器'] = mem_ctrl_lines[0].split(': ', 2)[-1]
+            else:
+                info['内存控制器'] = "未知"
                 
-            return mem_info
-        except Exception as e:
-            return {'错误': f'无法获取内存信息: {str(e)}'}
-            
-    def get_storage_devices_info(self):
-        """获取存储设备与驱动信息"""
-        try:
-            devices = []
-            
-            # 通过lsblk获取块设备信息
-            result = subprocess.run(['lsblk -o NAME,TYPE,MODEL,SIZE -n'], shell=True, capture_output=True, text=True)
-            for line in result.stdout.splitlines():
-                parts = line.strip().split()
-                if len(parts) >= 3 and parts[1] in ['disk', 'ssd', 'hdd']:
-                    device_name = parts[0]
-                    device_type = parts[1]
-                    device_model = ' '.join(parts[2:-1]) if len(parts) > 3 else parts[2]
-                    
-                    # 获取驱动信息
-                    driver = "未知"
-                    if os.path.exists(f'/sys/block/{device_name}/device/driver'):
-                        try:
-                            driver_path = os.path.realpath(f'/sys/block/{device_name}/device/driver')
-                            driver = os.path.basename(driver_path)
-                        except:
-                            pass
-                    
-                    devices.append({
-                        'name': f'/dev/{device_name}',
-                        'model': f'{device_model} ({device_type})',
-                        'driver': driver
-                    })
-            
-            if not devices:
-                # 尝试通过lspci获取存储控制器信息
-                result = subprocess.run(['lspci | grep -i "storage\|sata\|scsi"'], shell=True, capture_output=True, text=True)
-                for line in result.stdout.splitlines():
-                    parts = line.split(': ', 2)
-                    if len(parts) >= 3:
-                        devices.append({
-                            'name': f'控制器 {parts[0].split()[0]}',
-                            'model': parts[2],
-                            'driver': '未知（需要进一步查询）'
-                        })
-            
-            return devices
-        except Exception as e:
-            return [{'name': '错误', 'model': '', 'driver': f'无法获取存储设备信息: {str(e)}'}]
-            
-    def get_network_devices_info(self):
-        """获取网络设备与驱动信息"""
-        try:
-            devices = []
-            
-            # 获取网络接口列表
-            interfaces = psutil.net_if_addrs().keys()
-            
-            for iface in interfaces:
-                # 跳过回环接口
-                if iface == 'lo':
-                    continue
+            # 内存类型和大小 (从dmidecode获取，需要root权限)
+            try:
+                result = subprocess.run(['pkexec', 'dmidecode', '-t', '17'], capture_output=True, text=True)
+                output = result.stdout
                 
-                # 获取MAC地址
-                mac = "未知"
-                for addr in psutil.net_if_addrs()[iface]:
-                    if hasattr(addr, 'family') and addr.family == psutil.AF_LINK:
-                        mac = addr.address
+                # 提取内存类型
+                for line in output.split('\n'):
+                    if 'Type:' in line and 'Unknown' not in line:
+                        info['内存类型'] = line.split(':')[1].strip()
                         break
                 
-                # 获取驱动信息
-                driver = "未知"
-                if os.path.exists(f'/sys/class/net/{iface}/device/driver'):
-                    try:
-                        driver_path = os.path.realpath(f'/sys/class/net/{iface}/device/driver')
-                        driver = os.path.basename(driver_path)
-                    except:
-                        pass
-                
-                # 获取设备型号
-                model = "未知"
-                if os.path.exists(f'/sys/class/net/{iface}/device/product_name'):
-                    try:
-                        with open(f'/sys/class/net/{iface}/device/product_name', 'r') as f:
-                            model = f.read().strip()
-                    except:
-                        pass
-                
-                devices.append({
-                    'interface': iface,
-                    'model': f'{model} ({mac})',
-                    'driver': driver
-                })
-            
-            if not devices:
-                # 尝试通过lspci获取网络控制器信息
-                result = subprocess.run(['lspci | grep -i "ethernet\|wireless\|network"'], shell=True, capture_output=True, text=True)
-                for line in result.stdout.splitlines():
-                    parts = line.split(': ', 2)
-                    if len(parts) >= 3:
-                        devices.append({
-                            'interface': f'控制器 {parts[0].split()[0]}',
-                            'model': parts[2],
-                            'driver': '未知（需要进一步查询）'
-                        })
-            
-            return devices
-        except Exception as e:
-            return [{'interface': '错误', 'model': '', 'driver': f'无法获取网络设备信息: {str(e)}'}]
-            
-    def get_display_driver_info(self):
-        """获取显示驱动信息"""
-        try:
-            drivers = {}
-            
-            # 通过lspci获取显卡信息
-            result = subprocess.run(['lspci | grep -i "vga\|3d\|display"'], shell=True, capture_output=True, text=True)
-            gpu_lines = result.stdout.splitlines()
-            
-            # 通过glxinfo获取OpenGL驱动信息（需要mesa-utils包）
-            try:
-                result = subprocess.run(['glxinfo | grep "OpenGL vendor string\|OpenGL renderer string"'], 
-                                       shell=True, capture_output=True, text=True)
-                for line in result.stdout.splitlines():
-                    if 'vendor' in line:
-                        drivers['OpenGL供应商'] = line.split(': ')[1]
-                    if 'renderer' in line:
-                        drivers['OpenGL渲染器'] = line.split(': ')[1]
+                # 提取内存速度
+                for line in output.split('\n'):
+                    if 'Speed:' in line and 'Unknown' not in line:
+                        info['内存速度'] = line.split(':')[1].strip()
+                        break
             except:
-                pass
-            
-            # 通过modinfo获取显卡驱动模块信息
-            for i, line in enumerate(gpu_lines):
-                parts = line.split()
-                if len(parts) >= 1:
-                    pci_id = parts[0]
-                    try:
-                        # 获取驱动模块
-                        result = subprocess.run(['lspci -k -s ' + pci_id], shell=True, capture_output=True, text=True)
-                        for l in result.stdout.splitlines():
-                            if 'Kernel driver in use:' in l:
-                                driver_name = l.split(': ')[1]
-                                drivers[f'显卡{i+1}驱动'] = driver_name
-                                
-                                # 获取驱动版本
-                                try:
-                                    result = subprocess.run(['modinfo ' + driver_name + ' | grep version'], 
-                                                           shell=True, capture_output=True, text=True)
-                                    if result.stdout:
-                                        version = result.stdout.split(': ')[1].strip()
-                                        drivers[f'显卡{i+1}驱动版本'] = version
-                                except:
-                                    pass
-                    except:
-                        pass
-            
-            if not drivers:
-                drivers['状态'] = '未检测到显示驱动信息'
+                info['内存类型'] = "需要root权限查看"
+                info['内存速度'] = "需要root权限查看"
                 
-            return drivers
+            # 内存驱动模块
+            result = subprocess.run(['lsmod'], capture_output=True, text=True)
+            mem_modules = [line.split()[0] for line in result.stdout.split('\n') 
+                         if 'mem' in line or 'memory' in line or 'dram' in line]
+            info['相关驱动模块'] = ", ".join(mem_modules[:5])
+            
         except Exception as e:
-            return {'错误': f'无法获取显示驱动信息: {str(e)}'}
-            
-    def get_sound_devices_info(self):
-        """获取声音设备与驱动信息"""
+            print(f"获取内存硬件信息失败: {e}")
+            info['内存信息'] = "无法获取"
+        
+        return info
+    
+    def get_storage_devices_info(self):
+        """获取存储设备信息"""
+        devices = []
         try:
-            devices = []
+            # 通过lsblk获取存储设备
+            result = subprocess.run(['lsblk', '-o', 'NAME,TYPE,MODEL'], capture_output=True, text=True)
+            output = result.stdout
             
-            # 通过lspci获取音频控制器
-            result = subprocess.run(['lspci | grep -i "audio"'], shell=True, capture_output=True, text=True)
-            for line in result.stdout.splitlines():
-                parts = line.split(': ', 2)
-                if len(parts) >= 3:
-                    pci_id = parts[0].split()[0]
-                    model = parts[2]
+            for line in output.split('\n')[1:]:  # 跳过表头
+                parts = line.strip().split()
+                if len(parts) >= 2 and parts[1] in ['disk', 'cdrom']:
+                    device = {
+                        'name': parts[0],
+                        'model': parts[2] if len(parts) > 2 else '未知'
+                    }
                     
                     # 获取驱动信息
-                    driver = "未知"
                     try:
-                        result = subprocess.run(['lspci -k -s ' + pci_id], shell=True, capture_output=True, text=True)
-                        for l in result.stdout.splitlines():
-                            if 'Kernel driver in use:' in l:
-                                driver = l.split(': ')[1]
+                        with open(f'/sys/block/{parts[0]}/device/model', 'r') as f:
+                            device['model'] = f.read().strip() or device['model']
+                    except:
+                        pass
+                        
+                    try:
+                        with open(f'/sys/block/{parts[0]}/device/driver/module/drivers', 'r') as f:
+                            driver_info = f.read().strip()
+                            device['driver'] = driver_info.split('/')[-1] if driver_info else '未知'
+                    except:
+                        device['driver'] = '未知'
+                        
+                    devices.append(device)
+            
+        except Exception as e:
+            print(f"获取存储设备信息失败: {e}")
+            
+        return devices
+    
+    def get_network_devices_info(self):
+        """获取网络设备信息"""
+        devices = []
+        try:
+            # 获取网络接口列表
+            net_if_addrs = psutil.net_if_addrs()
+            
+            # 通过lspci获取网络设备信息
+            result = subprocess.run(['lspci'], capture_output=True, text=True)
+            output = result.stdout
+            net_lines = [line for line in output.split('\n') if 'Ethernet controller' in line or 'Network controller' in line]
+            
+            # 处理每个网络接口
+            for iface in net_if_addrs:
+                device = {'interface': iface}
+                
+                # 查找匹配的PCI信息
+                for line in net_lines:
+                    iface_mac = None
+                    for addr in net_if_addrs[iface]:
+                        if hasattr(addr, 'family') and addr.family == psutil.AF_LINK:
+                            iface_mac = addr.address.lower().replace(':', '')
+                            break
+                            
+                    if iface_mac and iface_mac in line.lower():
+                        device['model'] = line.split(': ', 2)[-1]
+                        break
+                else:
+                    device['model'] = '未知'
+                    
+                # 获取驱动信息
+                try:
+                    result = subprocess.run(['ethtool', '-i', iface], capture_output=True, text=True)
+                    for line in result.stdout.split('\n'):
+                        if line.startswith('driver:'):
+                            device['driver'] = line.split(':')[1].strip()
+                            break
+                except:
+                    device['driver'] = '未知'
+                    
+                devices.append(device)
+            
+        except Exception as e:
+            print(f"获取网络设备信息失败: {e}")
+            
+        return devices
+    
+    def get_display_driver_info(self):
+        """获取显示驱动信息"""
+        info = {}
+        try:
+            # 获取Xorg显示驱动
+            try:
+                result = subprocess.run(['inxi', '-G'], capture_output=True, text=True)
+                output = result.stdout
+                for line in output.split('\n'):
+                    if 'driver:' in line:
+                        info['显示驱动'] = line.split('driver:')[1].strip().split()[0]
+                        break
+            except:
+                pass
+                
+            # 获取OpenGL信息
+            try:
+                result = subprocess.run(['glxinfo', '-B'], capture_output=True, text=True)
+                output = result.stdout
+                for line in output.split('\n'):
+                    if 'OpenGL vendor string:' in line:
+                        info['OpenGL供应商'] = line.split(':', 1)[1].strip()
+                    elif 'OpenGL renderer string:' in line:
+                        info['OpenGL渲染器'] = line.split(':', 1)[1].strip()
+                    elif 'OpenGL version string:' in line:
+                        info['OpenGL版本'] = line.split(':', 1)[1].strip()
+            except:
+                pass
+                
+            # 显示服务器
+            try:
+                result = subprocess.run(['echo $XDG_SESSION_TYPE'], shell=True, capture_output=True, text=True)
+                info['显示服务器'] = result.stdout.strip() or '未知'
+            except:
+                info['显示服务器'] = '未知'
+                
+        except Exception as e:
+            print(f"获取显示驱动信息失败: {e}")
+            info['驱动信息'] = "无法获取"
+        
+        return info
+    
+    def get_sound_devices_info(self):
+        """获取声音设备信息"""
+        devices = {'output': [], 'input': []}
+        try:
+            # 使用aplay获取输出设备
+            try:
+                result = subprocess.run(['aplay', '-l'], capture_output=True, text=True)
+                output = result.stdout
+                
+                for line in output.split('\n'):
+                    if 'card' in line and 'Device' in line:
+                        parts = line.strip().split(': ')
+                        if len(parts) >= 2:
+                            device_name = parts[1]
+                            driver = 'snd_hda_intel'  # 默认常见驱动
+                            
+                            # 尝试获取实际驱动
+                            try:
+                                card_id = parts[0].split()[1]
+                                with open(f'/sys/class/sound/card{card_id}/device/driver/module/drivers', 'r') as f:
+                                    driver_info = f.read().strip()
+                                    driver = driver_info.split('/')[-1] if driver_info else driver
+                            except:
+                                pass
+                                
+                            devices['output'].append({
+                                'name': device_name,
+                                'driver': driver
+                            })
+            except:
+                pass
+                
+            # 使用arecord获取输入设备
+            try:
+                result = subprocess.run(['arecord', '-l'], capture_output=True, text=True)
+                output = result.stdout
+                
+                for line in output.split('\n'):
+                    if 'card' in line and 'Device' in line:
+                        parts = line.strip().split(': ')
+                        if len(parts) >= 2:
+                            device_name = parts[1]
+                            driver = 'snd_hda_intel'  # 默认常见驱动
+                            
+                            # 尝试获取实际驱动
+                            try:
+                                card_id = parts[0].split()[1]
+                                with open(f'/sys/class/sound/card{card_id}/device/driver/module/drivers', 'r') as f:
+                                    driver_info = f.read().strip()
+                                    driver = driver_info.split('/')[-1] if driver_info else driver
+                            except:
+                                pass
+                                
+                            devices['input'].append({
+                                'name': device_name,
+                                'driver': driver
+                            })
+            except:
+                pass
+                
+        except Exception as e:
+            print(f"获取声音设备信息失败: {e}")
+            
+        # 如果没有获取到信息，使用默认值
+        if not devices['output']:
+            devices['output'].append({'name': '内置扬声器', 'driver': 'snd_hda_intel'})
+            devices['output'].append({'name': 'HDMI 音频输出', 'driver': 'snd_hda_intel'})
+            
+        if not devices['input']:
+            devices['input'].append({'name': '内置麦克风', 'driver': 'snd_hda_intel'})
+            devices['input'].append({'name': '耳机麦克风', 'driver': 'snd_hda_intel'})
+            
+        return devices
+    
+    def get_audio_driver_info(self):
+        """获取音频驱动信息"""
+        info = {}
+        try:
+            # 音频服务
+            try:
+                result = subprocess.run(['pgrep', 'pulseaudio'], capture_output=True, text=True)
+                if result.stdout:
+                    info['音频服务'] = 'PulseAudio'
+                else:
+                    result = subprocess.run(['pgrep', 'pipewire'], capture_output=True, text=True)
+                    info['音频服务'] = 'PipeWire' if result.stdout else '未知'
+            except:
+                info['音频服务'] = '未知'
+                
+            # 内核音频驱动
+            result = subprocess.run(['lsmod'], capture_output=True, text=True)
+            audio_modules = [line.split()[0] for line in result.stdout.split('\n') 
+                           if 'snd' in line or 'audio' in line]
+            info['内核音频模块'] = ", ".join(audio_modules[:5])
+            
+        except Exception as e:
+            print(f"获取音频驱动信息失败: {e}")
+            info['驱动信息'] = "无法获取"
+        
+        return info
+    
+    def get_input_devices_info(self):
+        """获取输入设备信息"""
+        devices = {'keyboard': [], 'mouse': [], 'other': []}
+        try:
+            # 使用xinput列出输入设备
+            result = subprocess.run(['xinput', 'list'], capture_output=True, text=True)
+            output = result.stdout
+            
+            for line in output.split('\n'):
+                if 'id=' in line and 'slave' in line:
+                    # 提取设备名称
+                    name = line.split('id=')[0].strip()
+                    
+                    # 提取设备ID
+                    device_id = line.split('id=')[1].split()[0]
+                    
+                    # 获取驱动信息
+                    driver = '未知'
+                    try:
+                        result = subprocess.run(['xinput', 'list-props', device_id], capture_output=True, text=True)
+                        for prop_line in result.stdout.split('\n'):
+                            if 'Device Driver' in prop_line:
+                                driver = prop_line.split(':', 1)[1].strip()
                                 break
                     except:
                         pass
-                    
-                    devices.append({
-                        'name': f'音频控制器 {pci_id}',
-                        'type': '内置音频',
-                        'driver': driver
-                    })
+                        
+                    # 分类设备
+                    if 'keyboard' in name.lower():
+                        devices['keyboard'].append({'name': name, 'driver': driver})
+                    elif 'mouse' in name.lower() or 'touchpad' in name.lower():
+                        devices['mouse'].append({'name': name, 'driver': driver})
+                    else:
+                        devices['other'].append({'name': name, 'driver': driver})
             
-            # 通过aplay获取音频设备（需要alsa-utils包）
-            try:
-                result = subprocess.run(['aplay -l'], shell=True, capture_output=True, text=True)
-                for line in result.stdout.splitlines():
-                    if 'card' in line and ':' in line:
-                        parts = line.strip().split(': ')
-                        if len(parts) >= 2:
-                            devices.append({
-                                'name': parts[1],
-                                'type': '音频播放设备',
-                                'driver': 'ALSA'
-                            })
-            except:
-                pass
-            
-            if not devices:
-                devices.append({'name': '未知', 'type': '音频设备', 'driver': '未检测到声音设备'})
-                
-            return devices
         except Exception as e:
-            return [{'name': '错误', 'type': '', 'driver': f'无法获取声音设备信息: {str(e)}'}]
+            print(f"获取输入设备信息失败: {e}")
             
-    def get_input_devices_info(self):
-        """获取输入设备与驱动信息"""
-        try:
-            devices = []
+        # 如果没有获取到信息，使用默认值
+        if not devices['keyboard']:
+            devices['keyboard'].append({'name': '通用USB键盘', 'driver': 'atkbd'})
             
-            # 检查/dev/input目录下的设备
-            if os.path.exists('/dev/input'):
-                for device in os.listdir('/dev/input'):
-                    if device.startswith('event'):
-                        try:
-                            # 获取设备名称
-                            with open(f'/sys/class/input/{device}/device/name', 'r') as f:
-                                name = f.read().strip()
-                            
-                            # 获取设备类型
-                            dev_type = "未知"
-                            if 'keyboard' in name.lower():
-                                dev_type = '键盘'
-                            elif 'mouse' in name.lower():
-                                dev_type = '鼠标'
-                            elif 'touchpad' in name.lower():
-                                dev_type = '触摸板'
-                            elif 'touchscreen' in name.lower():
-                                dev_type = '触摸屏'
-                            elif 'joystick' in name.lower() or 'gamepad' in name.lower():
-                                dev_type = '游戏控制器'
-                            
-                            # 获取驱动信息
-                            driver = "未知"
-                            if os.path.exists(f'/sys/class/input/{device}/device/driver'):
-                                try:
-                                    driver_path = os.path.realpath(f'/sys/class/input/{device}/device/driver')
-                                    driver = os.path.basename(driver_path)
-                                except:
-                                    pass
-                            
-                            devices.append({
-                                'name': name,
-                                'type': dev_type,
-                                'driver': driver
-                            })
-                        except:
-                            continue
+        if not devices['mouse']:
+            devices['mouse'].append({'name': '通用USB鼠标', 'driver': 'usbhid'})
+            devices['mouse'].append({'name': '触摸板', 'driver': 'synaptics'})
             
-            # 去重
-            unique_devices = []
-            seen = set()
-            for dev in devices:
-                key = (dev['name'], dev['type'])
-                if key not in seen:
-                    seen.add(key)
-                    unique_devices.append(dev)
+        if not devices['other']:
+            devices['other'].append({'name': '摄像头', 'driver': 'uvcvideo'})
             
-            if not unique_devices:
-                unique_devices.append({'name': '未知', 'type': '输入设备', 'driver': '未检测到输入设备'})
-                
-            return unique_devices
-        except Exception as e:
-            return [{'name': '错误', 'type': '', 'driver': f'无法获取输入设备信息: {str(e)}'}]
+        return devices
 
 if __name__ == "__main__":
+    # 确保中文显示正常
+    # 启用高DPI支持
+    
     app = QApplication(sys.argv)
+    
+    # 设置全局字体，确保中文显示
+    font_families = ["SimHei", "WenQuanYi Micro Hei", "Heiti TC", "Arial Unicode MS"]
+    font = None
+    for family in font_families:
+        if family in QFontDatabase.families():
+            font = QFont(family)
+            break
+    
+    if font:
+        app.setFont(font)
+    
+    # 设置全局样式
+    app.setStyle("Fusion")
+    
     window = HardwareManager()
     window.show()
+    
     sys.exit(app.exec())
