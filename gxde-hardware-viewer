@@ -13,9 +13,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QGridLayout, QScrollArea,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
-                            QPushButton, QMenu, QMessageBox, QFileDialog, QAbstractItemView)
-from PyQt6.QtCore import Qt, QTimer, QSize
-from PyQt6.QtGui import QIcon, QFont, QFontDatabase
+                            QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QIcon, QFont, QFontDatabase, QPixmap
 
 class HardwareManager(QMainWindow):
     def __init__(self):
@@ -65,7 +65,7 @@ class HardwareManager(QMainWindow):
         self.sidebar.setFixedWidth(self.scaled(180))
         self.sidebar.setStyleSheet(f"""
             QListWidget {{
-                border-right: 1px solid #dcdcdc;
+                border-right: 1px solid #2CA7F8;
                 padding-top: {self.scaled(10)}px;
             }}
             QListWidgetItem {{
@@ -74,8 +74,8 @@ class HardwareManager(QMainWindow):
                 font-size: {self.scaled(14)}px;
             }}
             QListWidget::item:selected {{
-                color: #2ca7f8;
-                border-left: 3px solid #2ca7f8;
+                color: #2CA7F8;
+                border-left: 3px solid #2CA7F8;
             }}
         """)
         
@@ -297,18 +297,8 @@ class HardwareManager(QMainWindow):
             QMessageBox.critical(self, "导出失败", f"导出硬件信息时发生错误:\n{str(e)}")
     
     def show_about(self):
-        """显示关于对话框"""
-        about_text = (
-            "GXDE硬件管理器\n\n"
-            "版本：2.0 \n"
-            "描述：\n"
-            "这是一个用于查看系统硬件信息的工具，使用pyqt编写。\n\n"
-            "感谢使用过所有的开源软件\n"
-            "作者：ocean/zeqi\n"
-            "联系：https://gitee.com/ocean123455/hardware-viewer\n\n"
-        )
-        
-        QMessageBox.about(self, "关于硬件管理器", about_text)
+        dialog = AboutDialog(self)
+        dialog.exec()
         
     def apply_font_scaling(self):
         """应用字体缩放"""
@@ -374,6 +364,19 @@ class HardwareManager(QMainWindow):
         group.setLayout(layout)
         return group
         
+    def get_os_version(self):
+        """获取操作系统版本信息"""
+        try:
+            with open('/etc/os-release', 'r') as f:
+                for line in f:
+                    if line.startswith('PRETTY_NAME='):
+                        # 去除引号和换行符
+                        return line.split('=')[1].strip().strip('"')
+            return "未知系统版本"
+        except FileNotFoundError:
+            return "无法获取系统版本"
+        except Exception as e:
+            return f"获取失败: {str(e)}"
     def create_system_info_page(self):
         """创建系统信息页面"""
         widget = QWidget()
@@ -392,7 +395,7 @@ class HardwareManager(QMainWindow):
         # 获取系统信息
         uname = platform.uname()
         
-        sys_layout.addRow("操作系统:", QLabel(f"{uname.system} {uname.release} (GXDE)"))
+        sys_layout.addRow("操作系统:", QLabel(self.get_os_version()))
         sys_layout.addRow("主机名:", QLabel(uname.node))
         sys_layout.addRow("内核版本:", QLabel(uname.version))
         sys_layout.addRow("系统架构:", QLabel(uname.machine))
@@ -1106,16 +1109,29 @@ class HardwareManager(QMainWindow):
             self.resolution_label.setText(self.get_screen_resolution())
     
     def get_cpu_model(self):
-        """获取CPU型号（通过读取/proc/cpuinfo）"""
+        """通过deepin-os-release命令获取CPU型号"""
         try:
-            with open('/proc/cpuinfo', 'r') as f:
-                for line in f:
-                    if line.strip().startswith('model name'):
-                        return line.split(':')[1].strip()
-            return platform.processor() or "未知处理器"
+            result = subprocess.run(
+                ["/usr/libexec/dtk5/DCore/bin/deepin-os-release", "--cpu-model"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True  # 直接返回字符串而不是字节流
+            )
+        
+            # 检查命令执行结果
+            if result.returncode == 0:
+                # 处理输出，去除首尾空格和换行符
+                cpu_model = result.stdout.strip()
+                return cpu_model if cpu_model else "未知CPU型号"
+            else:
+                # 命令执行失败时返回错误信息
+                return f"获取失败: {result.stderr.strip()}"
+            
+        except FileNotFoundError:
+            return "命令不存在，请检查路径是否正确"
         except Exception as e:
-            print(f"获取CPU信息失败: {e}")
-            return platform.processor() or "未知处理器"
+            # 捕获其他可能的异常（如权限问题等）
+            return f"获取CPU型号出错: {str(e)}"
     
     def get_gpu_info(self):
         """获取显卡信息（通过lspci命令）"""
@@ -1421,45 +1437,56 @@ class HardwareManager(QMainWindow):
     
     def get_display_driver_info(self):
         """获取显示驱动信息"""
-        info = {}
         try:
-            # 获取Xorg显示驱动
+            drivers = {}
+            
+            # 通过lspci获取显卡信息
+            result = subprocess.run(['lspci | grep -i "vga\|3d\|display"'], shell=True, capture_output=True, text=True)
+            gpu_lines = result.stdout.splitlines()
+            
+            # 通过glxinfo获取OpenGL驱动信息（需要mesa-utils包）
             try:
-                result = subprocess.run(['inxi', '-G'], capture_output=True, text=True)
-                output = result.stdout
-                for line in output.split('\n'):
-                    if 'driver:' in line:
-                        info['显示驱动'] = line.split('driver:')[1].strip().split()[0]
-                        break
+                result = subprocess.run(['glxinfo | grep "OpenGL vendor string\|OpenGL renderer string"'], 
+                                       shell=True, capture_output=True, text=True)
+                for line in result.stdout.splitlines():
+                    if 'vendor' in line:
+                        drivers['OpenGL供应商'] = line.split(': ')[1]
+                    if 'renderer' in line:
+                        drivers['OpenGL渲染器'] = line.split(': ')[1]
             except:
                 pass
+            
+            # 通过modinfo获取显卡驱动模块信息
+            for i, line in enumerate(gpu_lines):
+                parts = line.split()
+                if len(parts) >= 1:
+                    pci_id = parts[0]
+                    try:
+                        # 获取驱动模块
+                        result = subprocess.run(['lspci -k -s ' + pci_id], shell=True, capture_output=True, text=True)
+                        for l in result.stdout.splitlines():
+                            if 'Kernel driver in use:' in l:
+                                driver_name = l.split(': ')[1]
+                                drivers[f'显卡{i+1}驱动'] = driver_name
+                                
+                                # 获取驱动版本
+                                try:
+                                    result = subprocess.run(['modinfo ' + driver_name + ' | grep version'], 
+                                                           shell=True, capture_output=True, text=True)
+                                    if result.stdout:
+                                        version = result.stdout.split(': ')[1].strip()
+                                        drivers[f'显卡{i+1}驱动版本'] = version
+                                except:
+                                    pass
+                    except:
+                        pass
+            
+            if not drivers:
+                drivers['状态'] = '未检测到显示驱动信息'
                 
-            # 获取OpenGL信息
-            try:
-                result = subprocess.run(['glxinfo', '-B'], capture_output=True, text=True)
-                output = result.stdout
-                for line in output.split('\n'):
-                    if 'OpenGL vendor string:' in line:
-                        info['OpenGL供应商'] = line.split(':', 1)[1].strip()
-                    elif 'OpenGL renderer string:' in line:
-                        info['OpenGL渲染器'] = line.split(':', 1)[1].strip()
-                    elif 'OpenGL version string:' in line:
-                        info['OpenGL版本'] = line.split(':', 1)[1].strip()
-            except:
-                pass
-                
-            # 显示服务器
-            try:
-                result = subprocess.run(['echo $XDG_SESSION_TYPE'], shell=True, capture_output=True, text=True)
-                info['显示服务器'] = result.stdout.strip() or '未知'
-            except:
-                info['显示服务器'] = '未知'
-                
+            return drivers
         except Exception as e:
-            print(f"获取显示驱动信息失败: {e}")
-            info['驱动信息'] = "无法获取"
-        
-        return info
+            return {'错误': f'无法获取显示驱动信息: {str(e)}'}
     
     def get_sound_devices_info(self):
         """获取声音设备信息"""
@@ -1613,10 +1640,102 @@ class HardwareManager(QMainWindow):
             
         return devices
 
+class AboutDialog(QDialog):
+    """关于对话框"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("关于 GXDE 硬件查看器")
+        self.setFixedSize(400, 450)
+        self.setModal(True)
+
+        layout = QVBoxLayout()
+        layout.setSpacing(10)
+
+        # 图标
+        icon_label = QLabel()
+        icon = QIcon.fromTheme("utilities-system-monitor")
+        icon_label.setPixmap(icon.pixmap(128, 128))
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(icon_label)
+
+        # 软件名称
+        name_label = QLabel("GXDE 硬件查看器")
+        name_font = QFont()
+        name_font.setPointSize(10)
+        name_font.setBold(True)
+        name_label.setFont(name_font)
+        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(name_label)
+
+        # 版本号
+        version_label = QLabel("版本: 2.1.2")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(version_label)
+
+        # 系统徽标和官网
+        gxde_vertical_layout = QVBoxLayout()
+        gxde_vertical_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        gxde_icon_label = QLabel()
+        gxde_logo_path = "/usr/share/scalable/gxde-logo.svg"
+        gxde_pixmap = QPixmap(gxde_logo_path)
+        if not gxde_pixmap.isNull():
+            scaled_pixmap = gxde_pixmap.scaled(
+                128, 128,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            gxde_icon_label.setPixmap(scaled_pixmap)
+            gxde_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            gxde_vertical_layout.addWidget(gxde_icon_label)
+        else:
+            gxde_text_label = QLabel("GXDE")
+            gxde_font = QFont()
+            gxde_font.setPointSize(18)
+            gxde_font.setBold(True)
+            gxde_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            gxde_vertical_layout.addWidget(gxde_text_label)
+
+        url_label = QLabel('<a href="https://www.gxde.top">www.gxde.top</a>')
+        url_label.setOpenExternalLinks(True)
+        url_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        gxde_vertical_layout.addWidget(url_label)
+
+        layout.addLayout(gxde_vertical_layout)
+
+        # 鸣谢按钮
+        thanks_button = QPushButton("鸣谢")
+        thanks_button.setStyleSheet("""
+            QPushButton {
+                border: none;
+                background-color: transparent;
+                color: #2980b9;
+                text-decoration: underline;
+                font-size: 14px;
+            }
+            QPushButton:hover { color: #3498db; }
+            QPushButton:pressed { color: #1f6391; }
+        """)
+        thanks_button.clicked.connect(lambda: QMessageBox.information(self, "鸣谢", "感谢所有使用过的开源软件和正在使用的你🌹"))
+        layout.addWidget(thanks_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # 功能说明
+        desc_text = """
+        GXDE 硬件管理器是一款专为 GXDE 桌面环境打造的轻量型硬件信息查看工具
+        """
+        desc_label = QLabel(desc_text)
+        desc_label.setWordWrap(True)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        desc_label.setStyleSheet("margin: 10px 20px;")
+        layout.addWidget(desc_label)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        button_box.accepted.connect(self.accept)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
 if __name__ == "__main__":
-    # 确保中文显示正常
-    # 启用高DPI支持
-    
+
     app = QApplication(sys.argv)
     
     # 设置全局字体，确保中文显示
