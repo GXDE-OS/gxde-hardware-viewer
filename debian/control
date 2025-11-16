@@ -8,7 +8,7 @@ Build-Depends:
  pyqt6-dev-tools,
  qt6-l10n-tools,
 Standards-Version: 4.7.2
-Homepage: https://gitee.com/ocean123455/hardware-viewer
+Homepage: https://gitee.com/GXDE-OS/gxde-hardware-viewer
 
 Package: gxde-hardware-viewer
 Architecture: all
