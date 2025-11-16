@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QLabel, QGroupBox, QFormLayout, QGridLayout, QScrollArea,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
 class HardwareManager(QMainWindow):
@@ -29,7 +29,7 @@ class HardwareManager(QMainWindow):
         self.swap_bar = None
         self.net_io_labels = {}
         self.disk_io_labels = {}
-        
+
         # 初始化UI缩放因子
         self.init_scaling_factor()
         self.initUI()
@@ -162,10 +162,10 @@ class HardwareManager(QMainWindow):
     
         # 菜单项目
             menu = self.menu_button.menu()
-            lang_menu = menu.actions()[0]  # 语言菜单现在是第0项
+            '''lang_menu = menu.actions()[0]  # 语言菜单现在是第0项
             lang_menu.setText(self.tr("Language"))
             lang_menu.menu().actions()[0].setText(self.tr("简体中文"))
-            lang_menu.menu().actions()[1].setText(self.tr("English"))
+            lang_menu.menu().actions()[1].setText(self.tr("English"))'''
 
             menu.actions()[1].setText(self.tr("Export all information to desktop"))  # 导出（第1项）
             menu.actions()[2].setText(self.tr("About"))  # 关于（第2项）
@@ -226,17 +226,6 @@ class HardwareManager(QMainWindow):
         """)
         
         # 添加菜单项
-        # 新增语言切换子菜单
-        lang_menu = menu.addMenu(self.tr("Language"))  # 语言菜单标题翻译
-    
-        chinese_action = lang_menu.addAction(self.tr("简体中文"))
-        chinese_action.triggered.connect(lambda: self.switch_language("zh"))
-    
-        english_action = lang_menu.addAction(self.tr("English"))
-        english_action.triggered.connect(lambda: self.switch_language("en"))
-
-        menu.addMenu(lang_menu)
-
         export_action = menu.addAction(self.tr("Export all information to desktop"))
         export_action.triggered.connect(self.export_all_info)
     
@@ -281,9 +270,9 @@ class HardwareManager(QMainWindow):
                 self.tr("Architecture"): platform.machine(),
                 self.tr("Physical Cores"): psutil.cpu_count(logical=False) or 0,
                 self.tr("Logical Cores"): psutil.cpu_count(logical=True) or 0,
-                self.tr("Current Frequency"): f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else "未知",
-                self.tr("Maximum Frequency"): f"{cpu_freq.max:.2f} MHz" if cpu_freq and cpu_freq.max else "未知",
-                self.tr("Minimum Frequency"): f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else "未知"
+                self.tr("Current Frequency"): f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else "Unknown",
+                self.tr("Maximum Frequency"): f"{cpu_freq.max:.2f} MHz" if cpu_freq and cpu_freq.max else "Unknown",
+                self.tr("Minimum Frequency"): f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else "Unknown"
             }
             
             # 内存信息
@@ -596,7 +585,7 @@ class HardwareManager(QMainWindow):
             driver_layout.addRow(f"{key}:", QLabel(value))
         
         driver_widget.setLayout(driver_layout)
-        layout.addWidget(self.create_group_box(self.tr("CPU驱动信息"), driver_widget))
+        layout.addWidget(self.create_group_box(self.tr("CPU Driver Information"), driver_widget))
         
         # CPU使用率
         cpu_usage = QWidget()
@@ -779,8 +768,8 @@ class HardwareManager(QMainWindow):
                 disk_table.setItem(row, 0, QTableWidgetItem(part.device))
                 disk_table.setItem(row, 1, QTableWidgetItem(part.mountpoint))
                 disk_table.setItem(row, 2, QTableWidgetItem(part.fstype))
-                disk_table.setItem(row, 3, QTableWidgetItem(self.tr("无权限")))
-                disk_table.setItem(row, 4, QTableWidgetItem(self.tr("无权限")))
+                disk_table.setItem(row, 3, QTableWidgetItem(self.tr("No Permission")))
+                disk_table.setItem(row, 4, QTableWidgetItem(self.tr("No Permission")))
                 continue
                 
             disk_table.setItem(row, 0, QTableWidgetItem(part.device))
@@ -805,9 +794,9 @@ class HardwareManager(QMainWindow):
         
         for row, device in enumerate(storage_devices):
             storage_table.setRowHeight(row, self.scaled(25))
-            storage_table.setItem(row, 0, QTableWidgetItem(device.get('name', self.tr('未知'))))
-            storage_table.setItem(row, 1, QTableWidgetItem(device.get('model', self.tr('未知'))))
-            storage_table.setItem(row, 2, QTableWidgetItem(device.get('driver', self.tr('未知'))))
+            storage_table.setItem(row, 0, QTableWidgetItem(device.get('name', self.tr(''))))
+            storage_table.setItem(row, 1, QTableWidgetItem(device.get('model', self.tr('Unknown'))))
+            storage_table.setItem(row, 2, QTableWidgetItem(device.get('driver', self.tr('Unknown'))))
         
         storage_table.horizontalHeader().setStretchLastSection(True)
         storage_driver_layout.addWidget(storage_table)
@@ -898,7 +887,7 @@ class HardwareManager(QMainWindow):
             net_table.setItem(row, 3, QTableWidgetItem(status))
         
         net_table.horizontalHeader().setStretchLastSection(True)
-        layout.addWidget(self.create_group_box(self.tr("网络接口"), net_table))
+        layout.addWidget(self.create_group_box(self.tr("Network Interfaces"), net_table))
         
         # 网络设备和驱动信息
         net_devices = self.get_network_devices_info()
@@ -1449,7 +1438,7 @@ class HardwareManager(QMainWindow):
                 if len(parts) >= 2 and parts[1] in ['disk', 'cdrom']:
                     device = {
                         'name': parts[0],
-                        'model': parts[2] if len(parts) > 2 else '未知'
+                        'model': parts[2] if len(parts) > 2 else 'Unknown'
                     }
                     
                     # 获取驱动信息
@@ -1462,7 +1451,7 @@ class HardwareManager(QMainWindow):
                     try:
                         with open(f'/sys/block/{parts[0]}/device/driver/module/drivers', 'r') as f:
                             driver_info = f.read().strip()
-                            device['driver'] = driver_info.split('/')[-1] if driver_info else '未知'
+                            device['driver'] = driver_info.split('/')[-1] if driver_info else 'Unknown'
                     except:
                         device['driver'] = self.tr("Unknown")
                         
@@ -1829,17 +1818,19 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     programPath = os.path.split(os.path.realpath(__file__))[0]
+
+    translator = QTranslator()
+    locale = QLocale.system().name()
+    translator.load(f"{programPath}/../share/gxde-hardware-viewer/translations/gxde-hardware-viewer_{locale}.qm")
+    if (os.path.exists(f"{programPath}/translations/gxde-hardware-viewer_{locale}.qm")):
+        translator.load(f"{programPath}/translations/gxde-hardware-viewer_{locale}.qm")
     
+    app.installTranslator(translator)
 
     # 设置全局样式
     app.setStyle("Fusion")
     
     window = HardwareManager()
-    # 获取系统环境变量以自动设置语言
-    if (os.getenv("LANG") == "zh_CN.UTF-8"):
-        window.translator.load("zh_CN", f"{programPath}/../share/gxde-hardware-viewer/translations/gxde-hardware-viewer_zh_CN.qm")
-        QCoreApplication.installTranslator(window.translator)
-
     window.show()
     
     sys.exit(app.exec())
