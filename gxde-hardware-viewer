@@ -14,13 +14,15 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QLabel, QGroupBox, QFormLayout, QGridLayout, QScrollArea,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QIcon, QFont, QFontDatabase, QPixmap
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication
+from PyQt6.QtGui import QIcon, QFont, QPixmap
 
 class HardwareManager(QMainWindow):
     def __init__(self):
         super().__init__()
         # 保存需要实时更新的控件引用
+        self.translator = QTranslator(self)
+        self.current_lang = "zh"  # 默认中文
         self.cpu_total_bar = None
         self.cpu_core_bars = []
         self.mem_total_bar = None
@@ -51,7 +53,7 @@ class HardwareManager(QMainWindow):
         
     def initUI(self):
         # 设置窗口基本属性
-        self.setWindowTitle("GXDE硬件管理器")
+        self.setWindowTitle(self.tr("GXDE硬件管理器"))
         # 使用相对大小而非固定大小
         self.resize(self.scaled(900), self.scaled(600))
         
@@ -80,14 +82,14 @@ class HardwareManager(QMainWindow):
         """)
         
         # 添加侧边栏项目
-        self.add_sidebar_item("系统信息", "system")
-        self.add_sidebar_item("处理器", "cpu")
-        self.add_sidebar_item("内存", "memory")
-        self.add_sidebar_item("存储", "disk-quota")
-        self.add_sidebar_item("网络", "network")
-        self.add_sidebar_item("显示", "display")
-        self.add_sidebar_item("声音", "sound")
-        self.add_sidebar_item("输入设备", "dialog-input-devices")
+        self.add_sidebar_item(self.tr("系统信息"), "system")
+        self.add_sidebar_item(self.tr("处理器"), "cpu")
+        self.add_sidebar_item(self.tr("内存"), "memory")
+        self.add_sidebar_item(self.tr("存储"), "disk-quota")
+        self.add_sidebar_item(self.tr("网络"), "network")
+        self.add_sidebar_item(self.tr("显示"), "display")
+        self.add_sidebar_item(self.tr("声音"), "sound")
+        self.add_sidebar_item(self.tr("输入设备"), "dialog-input-devices")
         
         # 创建主内容区域
         self.stack = QStackedWidget()
@@ -124,7 +126,79 @@ class HardwareManager(QMainWindow):
         
         # 应用字体缩放
         self.apply_font_scaling()
+    
+    def switch_language(self, lang):
+        """切换应用语言"""
+        if self.current_lang == lang:
+            return
         
+        self.current_lang = lang
+        # 移除现有翻译
+        QCoreApplication.removeTranslator(self.translator)
+    
+        # 加载对应语言文件（需提前准备en.qm和zh.qm）
+        if lang == "en":
+            if self.translator.load("en", "/home/ocean/Desktop/软件/hardware-viewer/新程序/translations"):  # 假设翻译文件在translations目录
+                QCoreApplication.installTranslator(self.translator)
+        else:  # 中文
+            QCoreApplication.removeTranslator(self.translator)
+    
+        # 重新翻译所有界面元素
+        self.retranslate_ui()
+
+    def retranslate_ui(self):
+        """重新翻译所有界面文本"""
+        # 窗口标题
+        self.setWindowTitle(self.tr("GXDE硬件管理器"))
+    
+        # 侧边栏项目
+        sidebar_texts = [
+            self.tr("系统信息"), self.tr("处理器"), self.tr("内存"), 
+            self.tr("存储"), self.tr("网络"), self.tr("显示"), 
+            self.tr("声音"), self.tr("输入设备")
+        ]
+        for i, text in enumerate(sidebar_texts):
+            self.sidebar.item(i).setText(text)
+    
+        # 菜单项目
+            menu = self.menu_button.menu()
+            lang_menu = menu.actions()[0]  # 语言菜单现在是第0项
+            lang_menu.setText(self.tr("语言"))
+            lang_menu.menu().actions()[0].setText(self.tr("中文"))
+            lang_menu.menu().actions()[1].setText(self.tr("English"))
+
+            menu.actions()[1].setText(self.tr("导出所有信息到桌面"))  # 导出（第1项）
+            menu.actions()[2].setText(self.tr("关于"))  # 关于（第2项）
+    
+        # 重新创建所有页面（更新翻译后刷新页面）
+        self.refresh_all_pages()
+    
+    def refresh_all_pages(self):
+        """刷新所有页面以更新翻译"""
+        current_index = self.stack.currentIndex()
+
+        while self.stack.count() > 0:
+            widget = self.stack.widget(0)  
+            self.stack.removeWidget(widget) 
+            widget.deleteLater() 
+
+        # 重新添加所有页面
+        self.stack.addWidget(self.create_system_info_page())
+        self.stack.addWidget(self.create_cpu_page())
+        self.stack.addWidget(self.create_memory_page())
+        self.stack.addWidget(self.create_storage_page())
+        self.stack.addWidget(self.create_network_page())
+        self.stack.addWidget(self.create_display_page())
+        self.stack.addWidget(self.create_sound_page())
+        self.stack.addWidget(self.create_input_page())
+
+        # 恢复之前选中的页面
+        if current_index < self.stack.count():
+            self.stack.setCurrentIndex(current_index)
+        else:
+            self.stack.setCurrentIndex(0)  # 异常时默认选中第一个
+
+
     def create_menu_button(self):
         """创建右上角菜单按钮"""
         # 创建菜单按钮
@@ -152,12 +226,22 @@ class HardwareManager(QMainWindow):
         """)
         
         # 添加菜单项
-        export_action = menu.addAction("导出所有信息到桌面")
+        # 新增语言切换子菜单
+        lang_menu = menu.addMenu(self.tr("语言"))  # 语言菜单标题翻译
+    
+        chinese_action = lang_menu.addAction(self.tr("中文"))
+        chinese_action.triggered.connect(lambda: self.switch_language("zh"))
+    
+        english_action = lang_menu.addAction(self.tr("English"))
+        english_action.triggered.connect(lambda: self.switch_language("en"))
+
+        menu.addMenu(lang_menu)
+
+        export_action = menu.addAction(self.tr("导出所有信息到桌面"))
         export_action.triggered.connect(self.export_all_info)
-        
-        about_action = menu.addAction("关于")
+    
+        about_action = menu.addAction(self.tr("关于"))
         about_action.triggered.connect(self.show_about)
-        
         # 设置按钮菜单
         menu_button.setMenu(menu)
         
@@ -291,10 +375,10 @@ class HardwareManager(QMainWindow):
                 json.dump(info, f, ensure_ascii=False, indent=4)
             
             # 显示成功消息
-            QMessageBox.information(self, "导出成功", f"硬件信息已成功导出到:\n{filepath}")
+            QMessageBox.information(self, self.tr("导出成功"), f"硬件信息已成功导出到:\n{filepath}")
             
         except Exception as e:
-            QMessageBox.critical(self, "导出失败", f"导出硬件信息时发生错误:\n{str(e)}")
+            QMessageBox.critical(self, self.tr("导出失败"), f"导出硬件信息时发生错误:\n{str(e)}")
     
     def show_about(self):
         dialog = AboutDialog(self)
@@ -372,11 +456,11 @@ class HardwareManager(QMainWindow):
                     if line.startswith('PRETTY_NAME='):
                         # 去除引号和换行符
                         return line.split('=')[1].strip().strip('"')
-            return "未知系统版本"
+            return self.tr("未知系统版本")
         except FileNotFoundError:
-            return "无法获取系统版本"
+            return self.tr("无法获取系统版本")
         except Exception as e:
-            return f"获取失败: {str(e)}"
+            return self.tr(f"获取失败: {str(e)}")
     def create_system_info_page(self):
         """创建系统信息页面"""
         widget = QWidget()
@@ -395,17 +479,17 @@ class HardwareManager(QMainWindow):
         # 获取系统信息
         uname = platform.uname()
         
-        sys_layout.addRow("操作系统:", QLabel(self.get_os_version()))
-        sys_layout.addRow("主机名:", QLabel(uname.node))
-        sys_layout.addRow("内核版本:", QLabel(uname.version))
-        sys_layout.addRow("系统架构:", QLabel(uname.machine))
+        sys_layout.addRow(self.tr("操作系统:"), QLabel(self.get_os_version()))
+        sys_layout.addRow(self.tr("主机名:"), QLabel(uname.node))
+        sys_layout.addRow(self.tr("内核版本:"), QLabel(uname.version))
+        sys_layout.addRow(self.tr("系统架构:"), QLabel(uname.machine))
         
         # 启动时间标签
         self.uptime_label = QLabel(self.get_uptime())
-        sys_layout.addRow("启动时间:", self.uptime_label)
+        sys_layout.addRow(self.tr("启动时间:"), self.uptime_label)
         
         self.sys_info_widget.setLayout(sys_layout)
-        layout.addWidget(self.create_group_box("系统概览", self.sys_info_widget))
+        layout.addWidget(self.create_group_box(self.tr("系统概览"), self.sys_info_widget))
         
         # 硬件概览
         hw_info = QWidget()
@@ -421,8 +505,8 @@ class HardwareManager(QMainWindow):
         logical_cpu = psutil.cpu_count(logical=True) or 0
         mem_total = self.format_size(psutil.virtual_memory().total)
         
-        hw_layout.addRow("处理器:", QLabel(f"{cpu_model} ({cpu_count} 核 {logical_cpu} 线程)"))
-        hw_layout.addRow("内存总容量:", QLabel(mem_total))
+        hw_layout.addRow(self.tr("处理器:") , QLabel(self.tr(f"{cpu_model} ({cpu_count} 核 {logical_cpu} 线程)")))
+        hw_layout.addRow(self.tr("内存总容量:"), QLabel(mem_total))
         
         # 获取磁盘总容量
         disk_total = 0
@@ -435,10 +519,10 @@ class HardwareManager(QMainWindow):
             except PermissionError:
                 continue
         
-        hw_layout.addRow("磁盘总容量:", QLabel(self.format_size(disk_total)))
+        hw_layout.addRow(self.tr("磁盘总容量:"), QLabel(self.format_size(disk_total)))
         
         hw_info.setLayout(hw_layout)
-        layout.addWidget(self.create_group_box("硬件概览", hw_info))
+        layout.addWidget(self.create_group_box(self.tr("硬件概览"), hw_info))
         
         # 内核模块信息
         kernel_modules = self.get_kernel_modules()
@@ -449,7 +533,7 @@ class HardwareManager(QMainWindow):
         modules_list.setWordWrap(True)
         modules_layout.addWidget(modules_list)
         
-        layout.addWidget(self.create_group_box("加载的核心驱动模块", modules_widget))
+        layout.addWidget(self.create_group_box(self.tr("加载的核心驱动模块"), modules_widget))
         
         layout.addStretch()
         return widget
@@ -480,23 +564,23 @@ class HardwareManager(QMainWindow):
         
         # 处理CPU频率信息
         cpu_freq = psutil.cpu_freq()
-        current_freq = f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else "未知"
-        max_freq = f"{cpu_freq.max:.2f} MHz" if cpu_freq and cpu_freq.max else "未知"
-        min_freq = f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else "未知"
+        current_freq = f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else self.tr("未知")
+        max_freq = f"{cpu_freq.max:.2f} MHz" if cpu_freq and cpu_freq.max else self.tr("未知")
+        min_freq = f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else self.tr("未知")
         
         # 保存当前频率标签引用以便更新
         self.cpu_current_freq_label = QLabel(current_freq)
         
-        cpu_base_layout.addRow("处理器型号:", QLabel(cpu_model))
-        cpu_base_layout.addRow("架构:", QLabel(cpu_arch))
-        cpu_base_layout.addRow("物理核心:", QLabel(str(cpu_count)))
-        cpu_base_layout.addRow("逻辑核心:", QLabel(str(logical_cpu)))
-        cpu_base_layout.addRow("当前频率:", self.cpu_current_freq_label)
-        cpu_base_layout.addRow("最大频率:", QLabel(max_freq))
-        cpu_base_layout.addRow("最小频率:", QLabel(min_freq))
+        cpu_base_layout.addRow(self.tr("处理器型号:"), QLabel(cpu_model))
+        cpu_base_layout.addRow(self.tr("架构:"), QLabel(cpu_arch))
+        cpu_base_layout.addRow(self.tr("物理核心:"), QLabel(str(cpu_count)))
+        cpu_base_layout.addRow(self.tr("逻辑核心:"), QLabel(str(logical_cpu)))
+        cpu_base_layout.addRow(self.tr("当前频率:"), self.cpu_current_freq_label)
+        cpu_base_layout.addRow(self.tr("最大频率:"), QLabel(max_freq))
+        cpu_base_layout.addRow(self.tr("最小频率:"), QLabel(min_freq))
         
         cpu_base.setLayout(cpu_base_layout)
-        layout.addWidget(self.create_group_box("基本信息", cpu_base))
+        layout.addWidget(self.create_group_box(self.tr("基本信息"), cpu_base))
         
         # CPU驱动信息
         cpu_drivers = self.get_cpu_driver_info()
@@ -511,7 +595,7 @@ class HardwareManager(QMainWindow):
             driver_layout.addRow(f"{key}:", QLabel(value))
         
         driver_widget.setLayout(driver_layout)
-        layout.addWidget(self.create_group_box("CPU驱动信息", driver_widget))
+        layout.addWidget(self.create_group_box(self.tr("CPU驱动信息"), driver_widget))
         
         # CPU使用率
         cpu_usage = QWidget()
@@ -523,11 +607,11 @@ class HardwareManager(QMainWindow):
         self.cpu_total_bar.setFixedHeight(self.scaled(25))
         cpu_percent = psutil.cpu_percent(interval=0.1)
         self.cpu_total_bar.setValue(int(cpu_percent))
-        self.cpu_total_bar.setFormat(f"总体使用率: {self.cpu_total_bar.value()}%")
+        self.cpu_total_bar.setFormat(self.tr(f"总体使用率: {self.cpu_total_bar.value()}%"))
         cpu_usage_layout.addWidget(self.cpu_total_bar)
         
         # 各核心使用率
-        label = QLabel("各核心使用率:")
+        label = QLabel(self.tr("各核心使用率:"))
         cpu_usage_layout.addWidget(label)
         
         self.core_usage_layout = QGridLayout()
@@ -539,13 +623,13 @@ class HardwareManager(QMainWindow):
             core_bar = QProgressBar()
             core_bar.setFixedHeight(self.scaled(25))
             core_bar.setValue(int(percent))
-            core_bar.setFormat(f"核心 {i}: {core_bar.value()}%")
+            core_bar.setFormat(self.tr(f"核心 {i}: {core_bar.value()}%"))
             self.core_usage_layout.addWidget(core_bar, i // 2, i % 2)
             self.cpu_core_bars.append(core_bar)
         
         cpu_usage_layout.addLayout(self.core_usage_layout)
         cpu_usage.setLayout(cpu_usage_layout)
-        layout.addWidget(self.create_group_box("CPU使用率", cpu_usage))
+        layout.addWidget(self.create_group_box(self.tr("CPU使用率"), cpu_usage))
         
         layout.addStretch()
         widget.setWidget(content)
@@ -569,7 +653,7 @@ class HardwareManager(QMainWindow):
         self.mem_total_bar = QProgressBar()
         self.mem_total_bar.setFixedHeight(self.scaled(25))
         self.mem_total_bar.setValue(int(mem.percent))
-        self.mem_total_bar.setFormat(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)} / {self.format_size(mem.total)})")
+        self.mem_total_bar.setFormat(self.tr(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)} / {self.format_size(mem.total)})"))
         mem_layout.addWidget(self.mem_total_bar)
         
         # 详细内存信息
@@ -585,17 +669,17 @@ class HardwareManager(QMainWindow):
         self.mem_available_label = QLabel(self.format_size(mem.available))
         self.mem_cache_label = QLabel(self.format_size(mem.total - mem.used - mem.free))
         
-        mem_details_layout.addRow("总内存:", QLabel(self.format_size(mem.total)))
-        mem_details_layout.addRow("已使用:", self.mem_used_label)
-        mem_details_layout.addRow("空闲:", self.mem_free_label)
-        mem_details_layout.addRow("可用:", self.mem_available_label)
-        mem_details_layout.addRow("缓存:", self.mem_cache_label)
+        mem_details_layout.addRow(self.tr("总内存:"), QLabel(self.format_size(mem.total)))
+        mem_details_layout.addRow(self.tr("已使用:"), self.mem_used_label)
+        mem_details_layout.addRow(self.tr("空闲:"), self.mem_free_label)
+        mem_details_layout.addRow(self.tr("可用:"), self.mem_available_label)
+        mem_details_layout.addRow(self.tr("缓存:"), self.mem_cache_label)
         
         self.mem_details.setLayout(mem_details_layout)
         mem_layout.addWidget(self.mem_details)
         
         mem_info.setLayout(mem_layout)
-        layout.addWidget(self.create_group_box("内存信息", mem_info))
+        layout.addWidget(self.create_group_box(self.tr("内存信息"), mem_info))
         
         # 内存硬件和驱动信息
         mem_hw_info = self.get_memory_hardware_info()
@@ -610,7 +694,7 @@ class HardwareManager(QMainWindow):
             mem_driver_layout.addRow(f"{key}:", QLabel(value))
         
         mem_driver_widget.setLayout(mem_driver_layout)
-        layout.addWidget(self.create_group_box("内存硬件与驱动", mem_driver_widget))
+        layout.addWidget(self.create_group_box(self.tr("内存硬件与驱动"), mem_driver_widget))
         
         # 交换分区信息
         swap_info = QWidget()
@@ -622,7 +706,7 @@ class HardwareManager(QMainWindow):
         self.swap_bar = QProgressBar()
         self.swap_bar.setFixedHeight(self.scaled(25))
         self.swap_bar.setValue(int(swap.percent))
-        self.swap_bar.setFormat(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)} / {self.format_size(swap.total)})")
+        self.swap_bar.setFormat(self.tr(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)} / {self.format_size(swap.total)})"))
         swap_layout.addWidget(self.swap_bar)
         
         # 交换分区详细信息
@@ -636,15 +720,15 @@ class HardwareManager(QMainWindow):
         self.swap_used_label = QLabel(self.format_size(swap.used))
         self.swap_free_label = QLabel(self.format_size(swap.free))
         
-        swap_details_layout.addRow("总交换分区:", QLabel(self.format_size(swap.total)))
-        swap_details_layout.addRow("已使用:", self.swap_used_label)
-        swap_details_layout.addRow("空闲:", self.swap_free_label)
+        swap_details_layout.addRow(self.tr("总交换分区:"), QLabel(self.format_size(swap.total)))
+        swap_details_layout.addRow(self.tr("已使用:"), self.swap_used_label)
+        swap_details_layout.addRow(self.tr("空闲:"), self.swap_free_label)
         
         self.swap_details.setLayout(swap_details_layout)
         swap_layout.addWidget(self.swap_details)
         
         swap_info.setLayout(swap_layout)
-        layout.addWidget(self.create_group_box("交换分区信息", swap_info))
+        layout.addWidget(self.create_group_box(self.tr("交换分区信息"), swap_info))
         
         layout.addStretch()
         return widget
@@ -662,7 +746,7 @@ class HardwareManager(QMainWindow):
         # 磁盘分区信息
         disk_table = QTableWidget()
         disk_table.setColumnCount(5)
-        disk_table.setHorizontalHeaderLabels(["设备", "挂载点", "文件系统", "总容量", "可用空间"])
+        disk_table.setHorizontalHeaderLabels([self.tr("设备"), self.tr("挂载点"), self.tr("文件系统"), self.tr("总容量"), self.tr("可用空间")])
         disk_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         # 设置表格字体
         font = disk_table.font()
@@ -694,8 +778,8 @@ class HardwareManager(QMainWindow):
                 disk_table.setItem(row, 0, QTableWidgetItem(part.device))
                 disk_table.setItem(row, 1, QTableWidgetItem(part.mountpoint))
                 disk_table.setItem(row, 2, QTableWidgetItem(part.fstype))
-                disk_table.setItem(row, 3, QTableWidgetItem("无权限"))
-                disk_table.setItem(row, 4, QTableWidgetItem("无权限"))
+                disk_table.setItem(row, 3, QTableWidgetItem(self.tr("无权限")))
+                disk_table.setItem(row, 4, QTableWidgetItem(self.tr("无权限")))
                 continue
                 
             disk_table.setItem(row, 0, QTableWidgetItem(part.device))
@@ -705,7 +789,7 @@ class HardwareManager(QMainWindow):
             disk_table.setItem(row, 4, QTableWidgetItem(self.format_size(disk_usage.free)))
         
         disk_table.horizontalHeader().setStretchLastSection(True)
-        layout.addWidget(self.create_group_box("磁盘分区", disk_table))
+        layout.addWidget(self.create_group_box(self.tr("磁盘分区"), disk_table))
         
         # 存储设备和驱动信息
         storage_devices = self.get_storage_devices_info()
@@ -714,20 +798,20 @@ class HardwareManager(QMainWindow):
         
         storage_table = QTableWidget()
         storage_table.setColumnCount(3)
-        storage_table.setHorizontalHeaderLabels(["设备名称", "型号", "驱动模块"])
+        storage_table.setHorizontalHeaderLabels([self.tr("设备名称"), self.tr("型号"), self.tr("驱动模块")])
         storage_table.setRowCount(len(storage_devices))
         storage_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         for row, device in enumerate(storage_devices):
             storage_table.setRowHeight(row, self.scaled(25))
-            storage_table.setItem(row, 0, QTableWidgetItem(device.get('name', '未知')))
-            storage_table.setItem(row, 1, QTableWidgetItem(device.get('model', '未知')))
-            storage_table.setItem(row, 2, QTableWidgetItem(device.get('driver', '未知')))
+            storage_table.setItem(row, 0, QTableWidgetItem(device.get('name', self.tr('未知'))))
+            storage_table.setItem(row, 1, QTableWidgetItem(device.get('model', self.tr('未知'))))
+            storage_table.setItem(row, 2, QTableWidgetItem(device.get('driver', self.tr('未知'))))
         
         storage_table.horizontalHeader().setStretchLastSection(True)
         storage_driver_layout.addWidget(storage_table)
         
-        layout.addWidget(self.create_group_box("存储设备与驱动", storage_driver_widget))
+        layout.addWidget(self.create_group_box(self.tr("存储设备与驱动"), storage_driver_widget))
         
         # 磁盘IO信息
         self.disk_io_widget = QWidget()
@@ -743,13 +827,13 @@ class HardwareManager(QMainWindow):
         self.disk_io_labels['read_bytes'] = QLabel(self.format_size(disk_io.read_bytes))
         self.disk_io_labels['write_bytes'] = QLabel(self.format_size(disk_io.write_bytes))
         
-        io_layout.addRow("读取次数:", self.disk_io_labels['read_count'])
-        io_layout.addRow("写入次数:", self.disk_io_labels['write_count'])
-        io_layout.addRow("读取字节:", self.disk_io_labels['read_bytes'])
-        io_layout.addRow("写入字节:", self.disk_io_labels['write_bytes'])
+        io_layout.addRow(self.tr("读取次数:"), self.disk_io_labels['read_count'])
+        io_layout.addRow(self.tr("写入次数:"), self.disk_io_labels['write_count'])
+        io_layout.addRow(self.tr("读取字节:"), self.disk_io_labels['read_bytes'])
+        io_layout.addRow(self.tr("写入字节:"), self.disk_io_labels['write_bytes'])
         
         self.disk_io_widget.setLayout(io_layout)
-        layout.addWidget(self.create_group_box("磁盘IO统计", self.disk_io_widget))
+        layout.addWidget(self.create_group_box(self.tr("磁盘IO统计"), self.disk_io_widget))
         
         layout.addStretch()
         widget.setWidget(content)
@@ -768,7 +852,7 @@ class HardwareManager(QMainWindow):
         # 网络接口信息
         net_table = QTableWidget()
         net_table.setColumnCount(4)
-        net_table.setHorizontalHeaderLabels(["接口名称", "IP地址", "MAC地址", "状态"])
+        net_table.setHorizontalHeaderLabels([self.tr("接口名称"), self.tr("IP地址"), self.tr("MAC地址"), self.tr("状态")])
         net_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         # 设置表格字体
         font = net_table.font()
@@ -789,23 +873,23 @@ class HardwareManager(QMainWindow):
             net_table.setRowHeight(row, self.scaled(25))
             
             # 获取IP地址
-            ip_address = "无"
+            ip_address = self.tr("无")
             for addr in net_if_addrs[iface]:
                 if addr.family == socket.AF_INET:
                     ip_address = addr.address
                     break
                     
             # 获取MAC地址
-            mac_address = "无"
+            mac_address = self.tr("无")
             for addr in net_if_addrs[iface]:
                 if hasattr(addr, 'family') and addr.family == psutil.AF_LINK:
                     mac_address = addr.address
                     break
                     
             # 获取状态
-            status = "未知"
+            status = self.tr("未知")
             if iface in net_if_stats:
-                status = "已连接" if net_if_stats[iface].isup else "未连接"
+                status = self.tr("已连接") if net_if_stats[iface].isup else self.tr("未连接")
             
             net_table.setItem(row, 0, QTableWidgetItem(iface))
             net_table.setItem(row, 1, QTableWidgetItem(ip_address))
@@ -813,7 +897,7 @@ class HardwareManager(QMainWindow):
             net_table.setItem(row, 3, QTableWidgetItem(status))
         
         net_table.horizontalHeader().setStretchLastSection(True)
-        layout.addWidget(self.create_group_box("网络接口", net_table))
+        layout.addWidget(self.create_group_box(self.tr("网络接口"), net_table))
         
         # 网络设备和驱动信息
         net_devices = self.get_network_devices_info()
@@ -822,20 +906,20 @@ class HardwareManager(QMainWindow):
         
         net_driver_table = QTableWidget()
         net_driver_table.setColumnCount(3)
-        net_driver_table.setHorizontalHeaderLabels(["接口名称", "设备型号", "驱动模块"])
+        net_driver_table.setHorizontalHeaderLabels([self.tr("接口名称"), self.tr("设备型号"), self.tr("驱动模块")])
         net_driver_table.setRowCount(len(net_devices))
         net_driver_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         
         for row, device in enumerate(net_devices):
             net_driver_table.setRowHeight(row, self.scaled(25))
-            net_driver_table.setItem(row, 0, QTableWidgetItem(device.get('interface', '未知')))
-            net_driver_table.setItem(row, 1, QTableWidgetItem(device.get('model', '未知')))
-            net_driver_table.setItem(row, 2, QTableWidgetItem(device.get('driver', '未知')))
+            net_driver_table.setItem(row, 0, QTableWidgetItem(device.get('interface', self.tr('未知'))))
+            net_driver_table.setItem(row, 1, QTableWidgetItem(device.get('model', self.tr('未知'))))
+            net_driver_table.setItem(row, 2, QTableWidgetItem(device.get('driver', self.tr('未知'))))
         
         net_driver_table.horizontalHeader().setStretchLastSection(True)
         net_driver_layout.addWidget(net_driver_table)
         
-        layout.addWidget(self.create_group_box("网络设备与驱动", net_driver_widget))
+        layout.addWidget(self.create_group_box(self.tr("网络设备与驱动"), net_driver_widget))
         
         # 网络流量信息
         self.net_io_widget = QWidget()
@@ -853,15 +937,15 @@ class HardwareManager(QMainWindow):
         self.net_io_labels['errin'] = QLabel(str(net_counter.errin))
         self.net_io_labels['errout'] = QLabel(str(net_counter.errout))
         
-        net_io_layout.addRow("接收字节:", self.net_io_labels['bytes_recv'])
-        net_io_layout.addRow("发送字节:", self.net_io_labels['bytes_sent'])
-        net_io_layout.addRow("接收包数:", self.net_io_labels['packets_recv'])
-        net_io_layout.addRow("发送包数:", self.net_io_labels['packets_sent'])
-        net_io_layout.addRow("接收错误:", self.net_io_labels['errin'])
-        net_io_layout.addRow("发送错误:", self.net_io_labels['errout'])
+        net_io_layout.addRow(self.tr("接收字节:"), self.net_io_labels['bytes_recv'])
+        net_io_layout.addRow(self.tr("发送字节:"), self.net_io_labels['bytes_sent'])
+        net_io_layout.addRow(self.tr("接收包数:"), self.net_io_labels['packets_recv'])
+        net_io_layout.addRow(self.tr("发送包数:"), self.net_io_labels['packets_sent'])
+        net_io_layout.addRow(self.tr("接收错误:"), self.net_io_labels['errin'])
+        net_io_layout.addRow(self.tr("发送错误:"), self.net_io_labels['errout'])
         
         self.net_io_widget.setLayout(net_io_layout)
-        layout.addWidget(self.create_group_box("网络流量统计", self.net_io_widget))
+        layout.addWidget(self.create_group_box(self.tr("网络流量统计"), self.net_io_widget))
         
         layout.addStretch()
         widget.setWidget(content)
@@ -886,13 +970,13 @@ class HardwareManager(QMainWindow):
         gpu_info = self.get_gpu_info()
         self.resolution_label = QLabel(self.get_screen_resolution())
         
-        display_layout.addRow("显卡:", QLabel(gpu_info))
-        display_layout.addRow("分辨率:", self.resolution_label)
-        display_layout.addRow("颜色深度:", QLabel(self.get_color_depth()))
-        display_layout.addRow("刷新率:", QLabel(self.get_refresh_rate()))
+        display_layout.addRow(self.tr("显卡:"), QLabel(gpu_info))
+        display_layout.addRow(self.tr("分辨率:"), self.resolution_label)
+        display_layout.addRow(self.tr("颜色深度:"), QLabel(self.get_color_depth()))
+        display_layout.addRow(self.tr("刷新率:"), QLabel(self.get_refresh_rate()))
         
         self.display_info.setLayout(display_layout)
-        layout.addWidget(self.create_group_box("显示设备", self.display_info))
+        layout.addWidget(self.create_group_box(self.tr("显示设备"), self.display_info))
         
         # 显示驱动信息
         display_drivers = self.get_display_driver_info()
@@ -907,7 +991,7 @@ class HardwareManager(QMainWindow):
             driver_layout.addRow(f"{key}:", QLabel(value))
         
         driver_widget.setLayout(driver_layout)
-        layout.addWidget(self.create_group_box("显示驱动信息", driver_widget))
+        layout.addWidget(self.create_group_box(self.tr("显示驱动信息"), driver_widget))
         
         layout.addStretch()
         return widget
@@ -926,7 +1010,7 @@ class HardwareManager(QMainWindow):
         sound_layout.setSpacing(self.scaled(6))
         
         # 输出设备
-        label1 = QLabel("音频输出设备:")
+        label1 = QLabel(self.tr("音频输出设备:"))
         font = label1.font()
         font.setBold(True)
         label1.setFont(font)
@@ -941,7 +1025,7 @@ class HardwareManager(QMainWindow):
         sound_layout.addWidget(line)
         
         # 输入设备
-        label2 = QLabel("音频输入设备:")
+        label2 = QLabel(self.tr("音频输入设备:"))
         font = label2.font()
         font.setBold(True)
         label2.setFont(font)
@@ -951,7 +1035,7 @@ class HardwareManager(QMainWindow):
             sound_layout.addWidget(QLabel(f"  - {device['name']} (驱动: {device['driver']})"))
         
         sound_widget.setLayout(sound_layout)
-        layout.addWidget(self.create_group_box("声音设备与驱动", sound_widget))
+        layout.addWidget(self.create_group_box(self.tr("声音设备与驱动"), sound_widget))
         
         # 音频驱动信息
         audio_drivers = self.get_audio_driver_info()
@@ -966,7 +1050,7 @@ class HardwareManager(QMainWindow):
             driver_layout.addRow(f"{key}:", QLabel(value))
         
         driver_widget.setLayout(driver_layout)
-        layout.addWidget(self.create_group_box("音频驱动详情", driver_widget))
+        layout.addWidget(self.create_group_box(self.tr("音频驱动详情"), driver_widget))
         
         layout.addStretch()
         return widget
@@ -986,7 +1070,7 @@ class HardwareManager(QMainWindow):
         
         # 键盘设备
         if input_devices.get('keyboard'):
-            label1 = QLabel("键盘:")
+            label1 = QLabel(self.tr("键盘:"))
             font = label1.font()
             font.setBold(True)
             label1.setFont(font)
@@ -1002,7 +1086,7 @@ class HardwareManager(QMainWindow):
         
         # 鼠标设备
         if input_devices.get('mouse'):
-            label2 = QLabel("鼠标:")
+            label2 = QLabel(self.tr("鼠标:"))
             font = label2.font()
             font.setBold(True)
             label2.setFont(font)
@@ -1018,7 +1102,7 @@ class HardwareManager(QMainWindow):
         
         # 其他输入设备
         if input_devices.get('other'):
-            label3 = QLabel("其他输入设备:")
+            label3 = QLabel(self.tr("其他输入设备:"))
             font = label3.font()
             font.setBold(True)
             label3.setFont(font)
@@ -1028,7 +1112,7 @@ class HardwareManager(QMainWindow):
                 input_layout.addWidget(QLabel(f"  - {device['name']} (驱动: {device['driver']})"))
         
         input_widget.setLayout(input_layout)
-        layout.addWidget(self.create_group_box("输入设备与驱动", input_widget))
+        layout.addWidget(self.create_group_box(self.tr("输入设备与驱动"), input_widget))
         
         layout.addStretch()
         return widget
@@ -1039,14 +1123,14 @@ class HardwareManager(QMainWindow):
         if self.cpu_total_bar:
             cpu_percent = psutil.cpu_percent(interval=0.1)
             self.cpu_total_bar.setValue(int(cpu_percent))
-            self.cpu_total_bar.setFormat(f"总体使用率: {int(cpu_percent)}%")
+            self.cpu_total_bar.setFormat(self.tr(f"总体使用率: {int(cpu_percent)}%"))
         
         # 更新各核心使用率
         if self.cpu_core_bars:
             core_percents = psutil.cpu_percent(percpu=True, interval=0.1)
             for i, (bar, percent) in enumerate(zip(self.cpu_core_bars, core_percents)):
                 bar.setValue(int(percent))
-                bar.setFormat(f"核心 {i}: {int(percent)}%")
+                bar.setFormat(self.tr(f"核心 {i}: {int(percent)}%"))
         
         # 更新当前频率
         if hasattr(self, 'cpu_current_freq_label'):
@@ -1060,7 +1144,7 @@ class HardwareManager(QMainWindow):
         if self.mem_total_bar:
             mem = psutil.virtual_memory()
             self.mem_total_bar.setValue(int(mem.percent))
-            self.mem_total_bar.setFormat(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)} / {self.format_size(mem.total)})")
+            self.mem_total_bar.setFormat(self.tr(f"内存使用率: {mem.percent:.1f}% ({self.format_size(mem.used)} / {self.format_size(mem.total)})"))
             
             # 更新内存详细信息
             self.mem_used_label.setText(self.format_size(mem.used))
@@ -1072,7 +1156,7 @@ class HardwareManager(QMainWindow):
         if self.swap_bar:
             swap = psutil.swap_memory()
             self.swap_bar.setValue(int(swap.percent))
-            self.swap_bar.setFormat(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)} / {self.format_size(swap.total)})")
+            self.swap_bar.setFormat(self.tr(f"交换分区使用率: {swap.percent:.1f}% ({self.format_size(swap.used)} / {self.format_size(swap.total)})"))
             
             # 更新交换分区详细信息
             self.swap_used_label.setText(self.format_size(swap.used))
@@ -1122,16 +1206,16 @@ class HardwareManager(QMainWindow):
             if result.returncode == 0:
                 # 处理输出，去除首尾空格和换行符
                 cpu_model = result.stdout.strip()
-                return cpu_model if cpu_model else "未知CPU型号"
+                return cpu_model if cpu_model else self.tr("未知CPU型号")
             else:
                 # 命令执行失败时返回错误信息
-                return f"获取失败: {result.stderr.strip()}"
+                return self.tr(f"获取失败: {result.stderr.strip()}")
             
         except FileNotFoundError:
-            return "命令不存在，请检查路径是否正确"
+            return self.tr("命令不存在，请检查路径是否正确")
         except Exception as e:
             # 捕获其他可能的异常（如权限问题等）
-            return f"获取CPU型号出错: {str(e)}"
+            return self.tr(f"获取CPU型号出错: {str(e)}")
     
     def get_gpu_info(self):
         """获取显卡信息（通过lspci命令）"""
@@ -1148,13 +1232,13 @@ class HardwareManager(QMainWindow):
                 gpu_info = [line.split(': ', 2)[-1] for line in gpu_lines]
                 return '; '.join(gpu_info)
             else:
-                return "未知显卡（未检测到VGA设备）"
+                return self.tr("未知显卡（未检测到VGA设备）")
         except Exception as e:
-            print(f"获取显卡信息失败: {e}")
-            return "未知显卡（请确保lspci命令可用）"
+            print(self.tr(f"获取显卡信息失败: {e}"))
+            return self.tr("未知显卡（请确保lspci命令可用）")
     
     def get_screen_resolution(self):
-        """获取屏幕分辨率（通过xrandr命令，更适合Linux桌面环境）"""
+        """获取屏幕分辨率"""
         try:
             # 尝试使用xrandr命令获取分辨率（Linux系统）
             result = subprocess.run(['xrandr'], capture_output=True, text=True)
@@ -1181,13 +1265,13 @@ class HardwareManager(QMainWindow):
             screen_geometry = QApplication.primaryScreen().geometry()
             return f"{screen_geometry.width()} x {screen_geometry.height()}"
         except Exception as e:
-            print(f"获取分辨率失败: {e}")
+            print(self.tr(f"获取分辨率失败: {e}"))
             try:
                 # 最后的备选方案
                 screen_geometry = QApplication.primaryScreen().geometry()
                 return f"{screen_geometry.width()} x {screen_geometry.height()}"
             except:
-                return "未知分辨率"
+                return self.tr("未知分辨率")
     
     def get_color_depth(self):
         """获取颜色深度"""
@@ -1198,12 +1282,12 @@ class HardwareManager(QMainWindow):
             
             for line in output.split('\n'):
                 if 'Depth' in line:
-                    return f"{line.split(':')[1].strip()} 位"
+                    return self.tr(f"{line.split(':')[1].strip()} 位")
             
             # 备选方案
-            return "32 位"
+            return self.tr("32 位")
         except:
-            return "32 位"
+            return self.tr("32 位")
     
     def get_refresh_rate(self):
         """获取刷新率"""
@@ -1261,10 +1345,10 @@ class HardwareManager(QMainWindow):
             # 只取前10个模块
             lines = output.split('\n')[1:11]  # 跳过表头
             modules = [line.split()[0] for line in lines if line.strip()]
-            return ", ".join(modules) + " (仅显示前10个)"
+            return ", ".join(modules) + self.tr(" (仅显示前10个)")
         except Exception as e:
-            print(f"获取内核模块失败: {e}")
-            return "无法获取内核模块信息"
+            print(self.tr(f"获取内核模块失败: {e}"))
+            return self.tr("无法获取内核模块信息")
     
     def get_cpu_driver_info(self):
         """获取CPU驱动信息"""
@@ -1441,12 +1525,12 @@ class HardwareManager(QMainWindow):
             drivers = {}
             
             # 通过lspci获取显卡信息
-            result = subprocess.run(['lspci | grep -i "vga\|3d\|display"'], shell=True, capture_output=True, text=True)
+            result = subprocess.run([r'lspci | grep -i "vga\|3d\|display"'], shell=True, capture_output=True, text=True)
             gpu_lines = result.stdout.splitlines()
             
             # 通过glxinfo获取OpenGL驱动信息（需要mesa-utils包）
             try:
-                result = subprocess.run(['glxinfo | grep "OpenGL vendor string\|OpenGL renderer string"'], 
+                result = subprocess.run([r'glxinfo | grep "OpenGL vendor string\|OpenGL renderer string"'], 
                                        shell=True, capture_output=True, text=True)
                 for line in result.stdout.splitlines():
                     if 'vendor' in line:
@@ -1553,12 +1637,12 @@ class HardwareManager(QMainWindow):
             
         # 如果没有获取到信息，使用默认值
         if not devices['output']:
-            devices['output'].append({'name': '内置扬声器', 'driver': 'snd_hda_intel'})
-            devices['output'].append({'name': 'HDMI 音频输出', 'driver': 'snd_hda_intel'})
+            devices['output'].append({'name': self.tr('内置扬声器'), 'driver': 'snd_hda_intel'})
+            devices['output'].append({'name': self.tr('HDMI 音频输出'), 'driver': 'snd_hda_intel'})
             
         if not devices['input']:
-            devices['input'].append({'name': '内置麦克风', 'driver': 'snd_hda_intel'})
-            devices['input'].append({'name': '耳机麦克风', 'driver': 'snd_hda_intel'})
+            devices['input'].append({'name': self.tr('内置麦克风'), 'driver': 'snd_hda_intel'})
+            devices['input'].append({'name': self.tr('耳机麦克风'), 'driver': 'snd_hda_intel'})
             
         return devices
     
@@ -1573,9 +1657,9 @@ class HardwareManager(QMainWindow):
                     info['音频服务'] = 'PulseAudio'
                 else:
                     result = subprocess.run(['pgrep', 'pipewire'], capture_output=True, text=True)
-                    info['音频服务'] = 'PipeWire' if result.stdout else '未知'
+                    info['音频服务'] = 'PipeWire' if result.stdout else self.tr('未知')
             except:
-                info['音频服务'] = '未知'
+                info['音频服务'] = self.tr('未知')
                 
             # 内核音频驱动
             result = subprocess.run(['lsmod'], capture_output=True, text=True)
@@ -1584,8 +1668,8 @@ class HardwareManager(QMainWindow):
             info['内核音频模块'] = ", ".join(audio_modules[:5])
             
         except Exception as e:
-            print(f"获取音频驱动信息失败: {e}")
-            info['驱动信息'] = "无法获取"
+            print(self.tr(f"获取音频驱动信息失败: {e}"))
+            info['驱动信息'] = self.tr("无法获取")
         
         return info
     
@@ -1644,7 +1728,7 @@ class AboutDialog(QDialog):
     """关于对话框"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("关于 GXDE 硬件查看器")
+        self.setWindowTitle(self.tr("关于 GXDE 硬件查看器"))
         self.setFixedSize(400, 450)
         self.setModal(True)
 
@@ -1659,7 +1743,7 @@ class AboutDialog(QDialog):
         layout.addWidget(icon_label)
 
         # 软件名称
-        name_label = QLabel("GXDE 硬件查看器")
+        name_label = QLabel(self.tr("GXDE 硬件查看器"))
         name_font = QFont()
         name_font.setPointSize(10)
         name_font.setBold(True)
@@ -1668,7 +1752,7 @@ class AboutDialog(QDialog):
         layout.addWidget(name_label)
 
         # 版本号
-        version_label = QLabel("版本: 2.1.2")
+        version_label = QLabel(self.tr("版本: 2.2.0"))
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(version_label)
 
@@ -1677,7 +1761,7 @@ class AboutDialog(QDialog):
         gxde_vertical_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         gxde_icon_label = QLabel()
-        gxde_logo_path = "/usr/share/scalable/gxde-logo.svg"
+        gxde_logo_path = "/home/ocean/Desktop/软件/hardware-viewer/gxde-logo/gxde-logo.svg"
         gxde_pixmap = QPixmap(gxde_logo_path)
         if not gxde_pixmap.isNull():
             scaled_pixmap = gxde_pixmap.scaled(
@@ -1704,7 +1788,7 @@ class AboutDialog(QDialog):
         layout.addLayout(gxde_vertical_layout)
 
         # 鸣谢按钮
-        thanks_button = QPushButton("鸣谢")
+        thanks_button = QPushButton(self.tr("鸣谢"))
         thanks_button.setStyleSheet("""
             QPushButton {
                 border: none;
@@ -1716,13 +1800,13 @@ class AboutDialog(QDialog):
             QPushButton:hover { color: #3498db; }
             QPushButton:pressed { color: #1f6391; }
         """)
-        thanks_button.clicked.connect(lambda: QMessageBox.information(self, "鸣谢", "感谢所有使用过的开源软件和正在使用的你🌹"))
+        thanks_button.clicked.connect(lambda: QMessageBox.information(self, "鸣谢", self.tr("感谢所有使用过的开源软件和正在使用的你🌹")))
         layout.addWidget(thanks_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # 功能说明
-        desc_text = """
+        desc_text = self.tr("""
         GXDE 硬件管理器是一款专为 GXDE 桌面环境打造的轻量型硬件信息查看工具
-        """
+        """)
         desc_label = QLabel(desc_text)
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1734,21 +1818,14 @@ class AboutDialog(QDialog):
         layout.addWidget(button_box)
 
         self.setLayout(layout)
+
+
+
 if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     
-    # 设置全局字体，确保中文显示
-    font_families = ["SimHei", "WenQuanYi Micro Hei", "Heiti TC", "Arial Unicode MS"]
-    font = None
-    for family in font_families:
-        if family in QFontDatabase.families():
-            font = QFont(family)
-            break
-    
-    if font:
-        app.setFont(font)
-    
+
     # 设置全局样式
     app.setStyle("Fusion")
     
