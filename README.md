@@ -4,14 +4,6 @@
 本工具专为Linux系统设计，提供硬件及驱动信息的可视化查看功能。  
 支持系统概览、CPU、内存、磁盘、网卡、PCI设备、USB设备和显卡等硬件信息的展示，并提供明暗主题切换功能。
 
-#### 软件架构
-支持全架构，但只测试了amd64架构
-
-#### 安装教程
-
-1. 下载链接：https://gitee.com/ocean123455/hardware-viewer/raw/master/hardware-viewer_1.2.1_all.deb 
-2. 使用 apt 安装
-
 #### 使用说明
 
 1. 目前只支持 Debian 系列发行版  

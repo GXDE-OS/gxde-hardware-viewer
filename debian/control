@@ -5,6 +5,7 @@ Maintainer: ocean <a202128502@163.com>
 Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
+ pyqt6-dev-tools,
 Standards-Version: 4.7.2
 Homepage: https://gitee.com/ocean123455/hardware-viewer
 
