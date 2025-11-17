@@ -53,7 +53,7 @@ class HardwareManager(QMainWindow):
         
     def initUI(self):
         # 设置窗口基本属性
-        self.setWindowTitle(self.tr("GXDE硬件管理器"))
+        self.setWindowTitle(self.tr("GXDE硬件查看器"))
         # 使用相对大小而非固定大小
         self.resize(self.scaled(900), self.scaled(600))
         
