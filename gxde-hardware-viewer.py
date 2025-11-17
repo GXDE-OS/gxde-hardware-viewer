@@ -1395,7 +1395,7 @@ class HardwareManager(QMainWindow):
                 
             # 内存类型和大小 (从dmidecode获取，需要root权限)
             try:
-                result = subprocess.run(['pkexec', 'dmidecode', '-t', '17'], capture_output=True, text=True)
+                result = subprocess.run(['gxde-hardware-viewer-helper', 'memory'], capture_output=True, text=True)
                 output = result.stdout
                 
                 # 提取内存类型
