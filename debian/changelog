@@ -1,5 +1,9 @@
-gxde-hardware-viewer (2.2.0) UNRELEASED; urgency=medium
+gxde-hardware-viewer (2.2.1) UNRELEASED; urgency=medium
 
+  [ gfdgd_xi ]
   * 新增英语支持
 
- -- gfdgd_xi <3025613752@qq.com>  Sun, 16 Nov 2025 11:47:31 +0800
+  [ shenmo ]
+  *新增支持免密码启动
+
+ -- shenmo <shenmo@spark-app.store>  Mon, 17 Nov 2025 10:26:17 +0800
