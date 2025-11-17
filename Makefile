@@ -8,6 +8,7 @@ install:
 	mkdir -pv $(DESTDIR)/usr/share/gxde-hardware-viewer/translations
 	mkdir -pv $(DESTDIR)/usr/bin
 	mkdir -pv $(DESTDIR)/usr/share/polkit-1/actions/
+	cp -rv polkit/* $(DESTDIR)/usr/share/polkit-1/actions/
 	cp -rv gxde-hardware-viewer.desktop $(DESTDIR)/usr/share/applications
 	cp -rv gxde-hardware-viewer.py $(DESTDIR)/usr/bin/gxde-hardware-viewer
 	cp -rv gxde-hardware-viewer-helper.sh $(DESTDIR)/usr/bin/gxde-hardware-viewer-helper
