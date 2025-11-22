@@ -909,7 +909,7 @@ class HardwareManager(QMainWindow):
         net_driver_table.horizontalHeader().setStretchLastSection(True)
         net_driver_layout.addWidget(net_driver_table)
         
-        layout.addWidget(self.create_group_box(self.tr("Network Interfaces"), net_table))
+        layout.addWidget(self.create_group_box(self.tr("Network Devices & Drivers"), net_driver_widget))
         
         # 网络流量信息
         self.net_io_widget = QWidget()
