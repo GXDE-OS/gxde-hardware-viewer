@@ -1715,7 +1715,7 @@ class HardwareManager(QMainWindow):
         return devices
 
 class AboutDialog(QDialog):
-    version = "2.2.0"
+    version = "2.2.2"
 
     """关于对话框"""
     def __init__(self, parent=None):
