@@ -8,6 +8,7 @@ import socket
 import subprocess
 import json
 import os
+import time
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
@@ -17,12 +18,45 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
+class CacheManager:
+    """缓存管理器"""
+    def __init__(self, default_ttl=300):
+        self.cache = {}
+        self.default_ttl = default_ttl
+    
+    def get(self, key):
+        """获取缓存值"""
+        if key in self.cache:
+            data, timestamp, ttl = self.cache[key]
+            if time.time() - timestamp < ttl:
+                return data
+            else:
+                # 缓存过期，删除
+                del self.cache[key]
+        return None
+    
+    def set(self, key, data, ttl=None):
+        """设置缓存值"""
+        if ttl is None:
+            ttl = self.default_ttl
+        self.cache[key] = (data, time.time(), ttl)
+    
+    def clear(self, key=None):
+        """清除缓存"""
+        if key:
+            if key in self.cache:
+                del self.cache[key]
+        else:
+            self.cache.clear()
+
 class HardwareManager(QMainWindow):
     def __init__(self):
         super().__init__()
+        # 初始化缓存管理器
+        self.cache = CacheManager()
         # 保存需要实时更新的控件引用
         self.translator = QTranslator(self)
-        self.current_lang = "en"  # 默认中文
+        self.current_lang = "en" 
         self.cpu_total_bar = None
         self.cpu_core_bars = []
         self.mem_total_bar = None
@@ -53,7 +87,7 @@ class HardwareManager(QMainWindow):
         
     def initUI(self):
         # 设置窗口基本属性
-        self.setWindowTitle(self.tr("GXDE硬件查看器"))
+        self.setWindowTitle(self.tr("GXDE Hardware Manager"))
         # 使用相对大小而非固定大小
         self.resize(self.scaled(900), self.scaled(600))
         
@@ -148,6 +182,9 @@ class HardwareManager(QMainWindow):
 
     def retranslate_ui(self):
         """重新翻译所有界面文本"""
+        # 清除缓存
+        self.cache.clear()
+        
         # 窗口标题
         self.setWindowTitle(self.tr("GXDE Hardware Manager"))
     
@@ -161,14 +198,9 @@ class HardwareManager(QMainWindow):
             self.sidebar.item(i).setText(text)
     
         # 菜单项目
-            menu = self.menu_button.menu()
-            '''lang_menu = menu.actions()[0]  # 语言菜单现在是第0项
-            lang_menu.setText(self.tr("Language"))
-            lang_menu.menu().actions()[0].setText(self.tr("简体中文"))
-            lang_menu.menu().actions()[1].setText(self.tr("English"))'''
-
-            menu.actions()[1].setText(self.tr("Export all information to desktop"))  # 导出（第1项）
-            menu.actions()[2].setText(self.tr("About"))  # 关于（第2项）
+        menu = self.menu_button.menu()
+        menu.actions()[1].setText(self.tr("Export all information to desktop"))
+        menu.actions()[2].setText(self.tr("About"))
     
         # 重新创建所有页面（更新翻译后刷新页面）
         self.refresh_all_pages()
@@ -249,6 +281,9 @@ class HardwareManager(QMainWindow):
         
     def export_all_info(self):
         """导出所有硬件信息到桌面"""
+        # 清空缓存
+        self.cache.clear()
+
         try:
             # 收集所有硬件信息
             info = {}
@@ -439,18 +474,31 @@ class HardwareManager(QMainWindow):
 
     def get_os_version(self):
         """获取操作系统版本信息"""
+        cache_key = "os_version"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+            
         try:
             with open('/etc/os-release', 'r') as f:
                 for line in f:
                     if line.startswith('PRETTY_NAME='):
                         # 去除引号和换行符
-                        return line.split('=')[1].strip().strip('"')
-            return self.tr("Unknown system version")
+                        result = line.split('=')[1].strip().strip('"')
+                        self.cache.set(cache_key, result, 3600)
+                        return result
+            result = self.tr("Unknown system version")
+            self.cache.set(cache_key, result, 60)
+            return result
         except FileNotFoundError:
-            return self.tr("Unable to get system version")
+            result = self.tr("Unable to get system version")
+            self.cache.set(cache_key, result, 60)
+            return result
         except Exception as e:
-            return self.tr("Failed to retrieve: {}").format(str(e))
-
+            result = self.tr("Failed to retrieve: {}").format(str(e))
+            self.cache.set(cache_key, result, 60)
+            return result
+        
     def create_system_info_page(self):
         """创建系统信息页面"""
         widget = QWidget()
@@ -1183,54 +1231,69 @@ class HardwareManager(QMainWindow):
             self.resolution_label.setText(self.get_screen_resolution())
     
     def get_cpu_model(self):
-        """通过deepin-os-release命令获取CPU型号"""
+        """获取CPU型号"""
+        cache_key = "cpu_model"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+            
         try:
             result = subprocess.run(
                 ["/usr/libexec/dtk5/DCore/bin/deepin-os-release", "--cpu-model"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True  # 直接返回字符串而不是字节流
+                text=True
             )
         
-            # 检查命令执行结果
             if result.returncode == 0:
-                # 处理输出，去除首尾空格和换行符
                 cpu_model = result.stdout.strip()
-                return cpu_model if cpu_model else self.tr("Unknown CPU Model")
+                final_result = cpu_model if cpu_model else self.tr("Unknown CPU Model")
             else:
-                # 命令执行失败时返回错误信息
-                return self.tr("Failed to retrieve: {}").format(result.stderr.strip())
+                final_result = self.tr("Failed to retrieve: {}").format(result.stderr.strip())
+            
+            self.cache.set(cache_key, final_result, 3600)
+            return final_result
             
         except FileNotFoundError:
-            return self.tr("Command does not exist, please check if the path is correct")
+            result = self.tr("Command does not exist, please check if the path is correct")
+            self.cache.set(cache_key, result, 3600)
+            return result
         except Exception as e:
-            # 捕获其他可能的异常（如权限问题等）
-            return self.tr("Error getting CPU model: {}").format(str(e))
+            result = self.tr("Error getting CPU model: {}").format(str(e))
+            self.cache.set(cache_key, result, 3600)
+            return result
     
+
     def get_gpu_info(self):
-        """获取显卡信息（通过lspci命令）"""
+        """获取显卡信息"""
+        cache_key = "gpu_info"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+            
         try:
-            # 调用lspci命令获取PCI设备信息
             result = subprocess.run(['lspci'], capture_output=True, text=True, check=True)
             output = result.stdout
             
-            # 过滤出VGA兼容控制器（显卡）信息
             gpu_lines = [line for line in output.split('\n') if 'VGA compatible controller' in line]
             
             if gpu_lines:
-                # 提取并清理显卡名称
                 gpu_info = [line.split(': ', 2)[-1] for line in gpu_lines]
-                return '; '.join(gpu_info)
+                result = '; '.join(gpu_info)
             else:
-                return self.tr("Unknown graphics card (no VGA device detected)")
+                result = self.tr("Unknown graphics card (no VGA device detected)")
+                
+            self.cache.set(cache_key, result, 3600)
+            return result
         except Exception as e:
-            print(self.tr("Failed to get graphics card information: {}").format(e))
-            return self.tr("Unknown graphics card (please ensure lspci command is available)")
+            result = self.tr("Unknown graphics card (please ensure lspci command is available)")
+            self.cache.set(cache_key, result, 3600)
+            return result
     
     def get_screen_resolution(self):
         """获取屏幕分辨率"""
         try:
-            # 尝试使用xrandr命令获取分辨率（Linux系统）
+            # 尝试使用xrandr命令获取分辨率
             result = subprocess.run(['xrandr'], capture_output=True, text=True)
             output = result.stdout
             
@@ -1251,7 +1314,7 @@ class HardwareManager(QMainWindow):
                             else:
                                 return part
             
-            # 如果xrandr失败，使用Qt的方法作为备选
+            # Qt的方法备选
             screen_geometry = QApplication.primaryScreen().geometry()
             return f"{screen_geometry.width()} x {screen_geometry.height()}"
         except Exception as e:
@@ -1328,30 +1391,41 @@ class HardwareManager(QMainWindow):
     # 新增驱动和设备信息相关函数
     def get_kernel_modules(self):
         """获取加载的内核模块"""
+        cache_key = "kernel_modules"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+            
         try:
             result = subprocess.run(['lsmod'], capture_output=True, text=True)
             output = result.stdout
             
-            # 只取前10个模块
-            lines = output.split('\n')[1:11]  # 跳过表头
+            lines = output.split('\n')[1:11]
             modules = [line.split()[0] for line in lines if line.strip()]
-            return ", ".join(modules) + self.tr(" (only showing the first 10)")
+            result = ", ".join(modules) + self.tr(" (only showing the first 10)")
+            self.cache.set(cache_key, result, 300)
+            return result
         except Exception as e:
-            print(self.tr("Failed to get kernel modules: {}").format(e))
-            return self.tr("Unable to get kernel module information")
+            result = self.tr("Unable to get kernel module information")
+            self.cache.set(cache_key, result, 60)
+            return result
     
+
     def get_cpu_driver_info(self):
         """获取CPU驱动信息"""
+        cache_key = "cpu_driver_info"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+            
         info = {}
         try:
-            # 获取CPU厂商信息
             with open('/proc/cpuinfo', 'r') as f:
                 for line in f:
                     if line.strip().startswith('vendor_id'):
                         info[self.tr('Vendor')] = line.split(':')[1].strip()
                         break
             
-            # 获取CPU微码版本
             try:
                 with open('/proc/cpuinfo', 'r') as f:
                     for line in f:
@@ -1361,24 +1435,23 @@ class HardwareManager(QMainWindow):
             except:
                 info[self.tr('Microcode Version')] = "Unknown"
             
-            # 获取CPU调度器
             try:
                 with open('/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor', 'r') as f:
                     info[self.tr('Scheduler')] = f.read().strip()
             except:
                 info[self.tr('Scheduler')] = "Unknown"
                 
-            # 获取CPU驱动模块
             result = subprocess.run(['lsmod'], capture_output=True, text=True)
             cpu_modules = [line.split()[0] for line in result.stdout.split('\n') 
                          if 'cpu' in line or 'processor' in line or 'intel' in line or 'amd' in line]
             info[self.tr('Related Driver Modules')] = ", ".join(cpu_modules[:5])
             
+            self.cache.set(cache_key, info, 300)
+            return info
         except Exception as e:
-            print(self.tr("Failed to get CPU driver information: {}").format(e))
             info[self.tr('Driver Information')] = self.tr("Unable to retrieve")
-        
-        return info
+            self.cache.set(cache_key, info, 60)
+            return info
     
     def get_memory_hardware_info(self):
         """获取内存硬件信息"""
@@ -1715,7 +1788,7 @@ class HardwareManager(QMainWindow):
         return devices
 
 class AboutDialog(QDialog):
-    version = "2.2.2"
+    version = "2.3.0"
 
     """关于对话框"""
     def __init__(self, parent=None):
