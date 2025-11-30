@@ -15,8 +15,10 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QLabel, QGroupBox, QFormLayout, QGridLayout, QScrollArea,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale
-from PyQt6.QtGui import QIcon, QFont, QPixmap
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QSize
+from PyQt6.QtGui import QIcon, QFont, QPixmap, QMovie
+
+version = "2.4.0"
 
 class CacheManager:
     """缓存管理器"""
@@ -52,9 +54,9 @@ class CacheManager:
 class HardwareManager(QMainWindow):
     def __init__(self):
         super().__init__()
-        # 初始化缓存管理器
+    
+        # 初始化变量
         self.cache = CacheManager()
-        # 保存需要实时更新的控件引用
         self.translator = QTranslator(self)
         self.current_lang = "en" 
         self.cpu_total_bar = None
@@ -63,12 +65,19 @@ class HardwareManager(QMainWindow):
         self.swap_bar = None
         self.net_io_labels = {}
         self.disk_io_labels = {}
-
-        # 初始化UI缩放因子
+    
+        # 初始化缩放因子
         self.init_scaling_factor()
+    
+        # 创建用户界面
         self.initUI()
-        self.init_timer()
-        
+    
+        # 启动硬件监控
+        self.monitor_timer = QTimer(self)
+        self.monitor_timer.setInterval(2000)
+        self.monitor_timer.timeout.connect(self.update_hardware_info)
+        self.monitor_timer.start()
+
     def init_scaling_factor(self):
         """初始化缩放因子，用于适配不同分辨率"""
         try:
@@ -78,7 +87,6 @@ class HardwareManager(QMainWindow):
             # 以96 DPI为基准计算缩放因子
             self.scaling_factor = dpi / 96.0
         except:
-            # 默认为1.0
             self.scaling_factor = 1.0
             
     def scaled(self, value):
@@ -128,6 +136,24 @@ class HardwareManager(QMainWindow):
         # 创建主内容区域
         self.stack = QStackedWidget()
         
+        # 添加加载中的提示页面
+        self.loading_page = self.create_loading_page()
+        self.stack.addWidget(self.loading_page)
+    
+        # 连接侧边栏选择事件
+        self.sidebar.currentRowChanged.connect(self.stack.setCurrentIndex)
+    
+        # 添加到主布局
+        main_layout.addWidget(self.sidebar)
+        main_layout.addWidget(self.stack, 1)
+    
+        # 设置中心部件
+        self.setCentralWidget(main_widget)
+    
+        # 默认显示加载页面，隐藏侧边栏
+        self.sidebar.hide()
+        self.stack.setCurrentIndex(0)
+
         # 添加各个页面
         self.stack.addWidget(self.create_system_info_page())
         self.stack.addWidget(self.create_cpu_page())
@@ -151,16 +177,120 @@ class HardwareManager(QMainWindow):
         # 默认选中第一个项目
         self.sidebar.setCurrentRow(0)
         
-
-        
         # 添加右上角菜单按钮
         self.create_menu_button()
         
-
-        
         # 应用字体缩放
         self.apply_font_scaling()
+
+        self.setup_text_selection()
+
+        QTimer.singleShot(100, self.load_real_pages)
     
+    def create_loading_page(self):
+        """创建加载页面"""
+        widget = QWidget()
+
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
+        layout.setSpacing(self.scaled(10))
+    
+        layout.addStretch()
+
+        # 创建GIF动画标签
+        self.loading_gif_label = QLabel()
+    
+        gif_path = "/home/ocean/Downloads/loading.gif"
+    
+        self.loading_movie = QMovie(gif_path)
+        self.loading_gif_label.setMovie(self.loading_movie)
+        self.loading_movie.start()
+        
+        gif_size = self.scaled(150)
+        self.loading_gif_label.setFixedSize(gif_size, gif_size)
+        self.loading_movie.setScaledSize(QSize(gif_size, gif_size))
+
+        gif_layout = QHBoxLayout()
+        gif_layout.addStretch()
+        gif_layout.addWidget(self.loading_gif_label)
+        gif_layout.addStretch()
+        layout.addLayout(gif_layout)
+
+        layout.addStretch()
+        return widget
+    
+    def load_real_pages(self):
+        """加载实际页面"""
+        QTimer.singleShot(1500, self.finish_loading)
+
+    def finish_loading(self):
+        """完成加载并显示主界面"""
+
+        if hasattr(self, 'loading_movie'):
+            self.loading_movie.stop()
+
+        # 移除加载页面，显示实际内容
+        self.stack.removeWidget(self.loading_page)
+        self.loading_page.deleteLater()
+
+        # 显示侧边栏并选中第一个项目
+        self.sidebar.show()
+        self.sidebar.setCurrentRow(0)
+
+    def setup_text_selection(self):
+        """设置文本选中复制功能"""
+        for widget in self.findChildren(QLabel):
+            if not isinstance(widget, (QProgressBar, QPushButton)):
+                widget.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                widget.setCursor(Qt.CursorShape.IBeamCursor)
+    
+        for table in self.findChildren(QTableWidget):
+            table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+            table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+            table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            table.customContextMenuRequested.connect(self.show_table_context_menu)  # 改为连接到一个显示菜单的函数
+
+    def show_table_context_menu(self, pos):
+        """显示表格右键菜单"""
+        table = self.sender()
+        if not table:
+            return
+    
+        # 创建右键菜单
+        menu = QMenu(self)
+    
+        # 添加复制选项
+        copy_action = menu.addAction(self.tr("Copy"))
+        copy_action.triggered.connect(lambda: self.copy_table_content(table))
+    
+        # 只有在有选中内容时才显示菜单
+        if table.selectedItems():
+            menu.exec(table.viewport().mapToGlobal(pos))
+
+    def copy_table_content(self, table):
+        """复制表格选中内容"""
+        selected_items = table.selectedItems()
+        if not selected_items:
+            return
+    
+        # 获取选中的行和列范围
+        rows = sorted(set(item.row() for item in selected_items))
+        cols = sorted(set(item.column() for item in selected_items))
+    
+        # 构建复制的文本
+        text = ""
+        for row in rows:
+            row_data = []
+            for col in cols:
+                item = table.item(row, col)
+                if item:
+                    row_data.append(item.text())
+            text += "\t".join(row_data) + "\n"
+    
+        # 复制到剪贴板
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text.strip())
+
     def switch_language(self, lang):
         """切换应用语言"""
         if self.current_lang == lang:
@@ -272,6 +402,29 @@ class HardwareManager(QMainWindow):
         
         # 保存按钮引用，以便在窗口大小改变时调整位置
         self.menu_button = menu_button
+
+        QTimer.singleShot(100, self.update_menu_button_position)
+
+    def update_menu_button_position(self):
+        """更新菜单按钮位置"""
+        if hasattr(self, 'menu_button') and self.menu_button:
+            # 计算正确的位置
+            x_pos = self.width() - self.menu_button.width() - 10
+            y_pos = 10  # 距离顶部10像素
+            self.menu_button.move(x_pos, y_pos)
+            self.menu_button.raise_()  # 确保按钮在最上层
+            self.menu_button.show()    # 确保按钮显示
+
+    def resizeEvent(self, event):
+        """重写窗口大小改变事件，确保菜单按钮始终在右上角"""
+        super().resizeEvent(event)
+        self.update_menu_button_position()
+
+    def showEvent(self, event):
+        """重写窗口显示事件，确保菜单按钮正确显示"""
+        super().showEvent(event)
+        # 窗口显示后更新菜单按钮位置
+        QTimer.singleShot(100, self.update_menu_button_position)
         
     def resizeEvent(self, event):
         """重写窗口大小改变事件，确保菜单按钮始终在右上角"""
@@ -416,10 +569,10 @@ class HardwareManager(QMainWindow):
         
     def init_timer(self):
         """初始化定时器用于实时更新信息"""
-        self.timer = QTimer(self)
-        self.timer.setInterval(2000)  # 2秒更新一次
-        self.timer.timeout.connect(self.update_hardware_info)
-        self.timer.start()
+        self.monitor_timer = QTimer(self)
+        self.monitor_timer.setInterval(2000)  # 2秒更新一次
+        self.monitor_timer.timeout.connect(self.update_hardware_info)
+        self.monitor_timer.start()
         
     def update_hardware_info(self):
         """更新硬件信息"""
@@ -1788,7 +1941,7 @@ class HardwareManager(QMainWindow):
         return devices
 
 class AboutDialog(QDialog):
-    version = "2.3.0"
+    
 
     """关于对话框"""
     def __init__(self, parent=None):
@@ -1817,7 +1970,7 @@ class AboutDialog(QDialog):
         layout.addWidget(name_label)
 
         # 版本号
-        version_label = QLabel(self.tr("Version: ") + self.version)
+        version_label = QLabel(self.tr("Version: ") + version)
         version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(version_label)
 
