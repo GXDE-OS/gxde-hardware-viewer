@@ -2,8 +2,9 @@ gxde-hardware-viewer (2.4.0) UNRELEASED; urgency=medium
 
   [ gfdgd_xi ]
   * 新增英语支持
+  * 新增缓存功能及修复英文下标题为中文
 
   [ shenmo ]
   *新增支持免密码启动
 
- -- shenmo <shenmo@spark-app.store>  Mon, 17 Nov 2025 10:26:17 +0800
+ -- gfdgd_xi <3025613752@qq.com>  Sat, 29 Nov 2025 17:49:00 +0800
