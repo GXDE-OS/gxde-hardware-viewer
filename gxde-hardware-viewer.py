@@ -59,23 +59,23 @@ class GXDETitleBar(QWidget):
         self.menu_button.setStyleSheet(f"""
             QPushButton {{
                 border: none;
-                border-radius: {self.scaled(4)}px; /* DTK圆角 */
+                border-radius: {self.scaled(4)}px;
                 background-color: transparent;
                 font-size: {self.scaled(16)}px;
             }}
             QPushButton:hover {{
-                background-color: #f0f0f0;
+                background-color: grey;
             }}
             QPushButton:pressed {{
-                background-color: #e0e0e0;
+                background-color: #103857;
             }}
         """)
         self.layout.addWidget(self.menu_button)
         
         # 4. 右侧：窗口控制按钮
-        self.min_btn = self.create_dtk_control_btn("—")
-        self.max_btn = self.create_dtk_control_btn("□")
-        self.close_btn = self.create_dtk_control_btn("×")
+        self.min_btn = self.create_gxde_control_btn("—")
+        self.max_btn = self.create_gxde_control_btn("□")
+        self.close_btn = self.create_gxde_control_btn("×")
         # 关闭按钮样式
         self.close_btn.setStyleSheet(f"""
             QPushButton {{
@@ -105,8 +105,8 @@ class GXDETitleBar(QWidget):
         """复用缩放逻辑"""
         return int(value * self.scaling_factor)
 
-    def create_dtk_control_btn(self, text):
-        """创建DTK风格的窗口控制按钮（最小化/最大化）"""
+    def create_gxde_control_btn(self, text):
+        """创建窗口控制按钮（最小化/最大化）"""
         btn = QPushButton(text)
         btn.setFixedSize(self.scaled(24), self.scaled(24))
         btn.setStyleSheet(f"""
@@ -117,13 +117,13 @@ class GXDETitleBar(QWidget):
                 font-size: {self.scaled(14)}px;
             }}
             QPushButton:hover {{
-                background-color: #f0f0f0;
+                background-color: grey;  
             }}
             QPushButton:pressed {{
-                background-color: #e0e0e0;
+                background-color: #103857;
             }}
         """)
-        return btn
+        return btn 
 
     def toggle_maximize(self):
         """切换窗口最大化/还原"""
@@ -221,11 +221,7 @@ class HardwareManager(QMainWindow):
         
     def initUI(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        self.setStyleSheet("""
-        QMainWindow {
-            background-color: white;
-        }
-        """)
+
         self.setWindowTitle(self.tr("GXDE Hardware Manager"))
         self.resize(self.scaled(900), self.scaled(600))
     
