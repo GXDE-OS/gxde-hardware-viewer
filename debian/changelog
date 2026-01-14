@@ -1,4 +1,4 @@
-gxde-hardware-viewer (2.4.0) UNRELEASED; urgency=medium
+gxde-hardware-viewer (2.5.0-1) UNRELEASED; urgency=medium
 
   [ gfdgd_xi ]
   * 新增英语支持
@@ -7,4 +7,4 @@ gxde-hardware-viewer (2.4.0) UNRELEASED; urgency=medium
   [ shenmo ]
   *新增支持免密码启动
 
- -- gfdgd_xi <3025613752@qq.com>  Sat, 29 Nov 2025 17:49:00 +0800
+ -- gfdgd_xi <3025613752@qq.com>  Wed, 14 Jan 2026 12:29:28 +0800

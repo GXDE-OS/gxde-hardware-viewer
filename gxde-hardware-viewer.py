@@ -12,13 +12,142 @@ import time
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
-                            QLabel, QGroupBox, QFormLayout, QGridLayout, QScrollArea,
+                            QLabel, QGroupBox, QFormLayout, QScrollArea,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QSize
-from PyQt6.QtGui import QIcon, QFont, QPixmap, QMovie
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QPoint
+from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.4.0"
+version = "2.5.0"
+
+class GXDETitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.dragging = False
+        self.drag_start_pos = QPoint()
+        
+        # 初始化缩放因子
+        self.scaling_factor = parent.scaling_factor if hasattr(parent, 'scaling_factor') else 1.0
+        
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(
+            self.scaled(8), self.scaled(4), 
+            self.scaled(8), self.scaled(4)
+        )
+        self.layout.setSpacing(self.scaled(8))
+
+        # 1. 设置标题栏布局
+        self.layout.setContentsMargins(self.scaled(12), self.scaled(8), self.scaled(12), self.scaled(8))
+        self.layout.setSpacing(self.scaled(15))
+        
+        # 2. 左侧：窗口标题标签
+        app_icon = QIcon.fromTheme("utilities-system-monitor")
+        icon_size = self.scaled(24)
+        icon_pixmap = app_icon.pixmap(icon_size, icon_size)
+
+        self.title_icon_label = QLabel()
+        self.title_icon_label.setPixmap(icon_pixmap)
+        self.title_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.title_icon_label.setFixedSize(self.scaled(24), self.scaled(24))
+        self.layout.addWidget(self.title_icon_label)
+        self.layout.addStretch()
+        
+        # 3. 右侧：菜单按钮
+        self.menu_button = QPushButton("☰")
+        self.menu_button.setFixedSize(self.scaled(24), self.scaled(24))
+        self.menu_button.setStyleSheet(f"""
+            QPushButton {{
+                border: none;
+                border-radius: {self.scaled(4)}px;
+                background-color: transparent;
+                font-size: {self.scaled(16)}px;
+            }}
+            QPushButton:hover {{
+                background-color: grey;
+            }}
+            QPushButton:pressed {{
+                background-color: #103857;
+            }}
+        """)
+        self.layout.addWidget(self.menu_button)
+        
+        # 4. 右侧：窗口控制按钮
+        self.min_btn = self.create_gxde_control_btn("—")
+        self.max_btn = self.create_gxde_control_btn("□")
+        self.close_btn = self.create_gxde_control_btn("×")
+        # 关闭按钮样式
+        self.close_btn.setStyleSheet(f"""
+            QPushButton {{
+                border: none;
+                border-radius: {self.scaled(4)}px;
+                background-color: transparent;
+                font-size: {self.scaled(14)}px;
+            }}
+            QPushButton:hover {{
+                background-color: #ff4444;
+                color: white;
+            }}
+            QPushButton:pressed {{
+                background-color: #cc0000;
+            }}
+        """)
+        self.layout.addWidget(self.min_btn)
+        self.layout.addWidget(self.max_btn)
+        self.layout.addWidget(self.close_btn)
+        
+        # 5. 绑定窗口控制按钮事件
+        self.min_btn.clicked.connect(self.parent.showMinimized)
+        self.max_btn.clicked.connect(self.toggle_maximize)
+        self.close_btn.clicked.connect(self.parent.close)
+
+    def scaled(self, value):
+        """复用缩放逻辑"""
+        return int(value * self.scaling_factor)
+
+    def create_gxde_control_btn(self, text):
+        """创建窗口控制按钮（最小化/最大化）"""
+        btn = QPushButton(text)
+        btn.setFixedSize(self.scaled(24), self.scaled(24))
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                border: none;
+                border-radius: {self.scaled(4)}px;
+                background-color: transparent;
+                font-size: {self.scaled(14)}px;
+            }}
+            QPushButton:hover {{
+                background-color: grey;  
+            }}
+            QPushButton:pressed {{
+                background-color: #103857;
+            }}
+        """)
+        return btn 
+
+    def toggle_maximize(self):
+        """切换窗口最大化/还原"""
+        if self.parent.isMaximized():
+            self.parent.showNormal()
+            self.max_btn.setText("□")
+        else:
+            self.parent.showMaximized()
+            self.max_btn.setText("▢")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = True
+            self.drag_start_pos = event.globalPosition().toPoint() - self.parent.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self.dragging and event.buttons() == Qt.MouseButton.LeftButton:
+            self.parent.move(event.globalPosition().toPoint() - self.drag_start_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self.dragging = False
+        event.accept()
 
 class CacheManager:
     """缓存管理器"""
@@ -59,10 +188,6 @@ class HardwareManager(QMainWindow):
         self.cache = CacheManager()
         self.translator = QTranslator(self)
         self.current_lang = "en" 
-        self.cpu_total_bar = None
-        self.cpu_core_bars = []
-        self.mem_total_bar = None
-        self.swap_bar = None
         self.net_io_labels = {}
         self.disk_io_labels = {}
     
@@ -80,11 +205,12 @@ class HardwareManager(QMainWindow):
 
     def init_scaling_factor(self):
         """初始化缩放因子，用于适配不同分辨率"""
+        self.scaling_factor = 1.0
         try:
             # 获取屏幕逻辑DPI
             screen = QApplication.primaryScreen()
             dpi = screen.logicalDotsPerInch()
-            # 以96 DPI为基准计算缩放因子
+
             self.scaling_factor = dpi / 96.0
         except:
             self.scaling_factor = 1.0
@@ -94,18 +220,33 @@ class HardwareManager(QMainWindow):
         return int(value * self.scaling_factor)
         
     def initUI(self):
-        # 设置窗口基本属性
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+
         self.setWindowTitle(self.tr("GXDE Hardware Manager"))
-        # 使用相对大小而非固定大小
         self.resize(self.scaled(900), self.scaled(600))
-        
-        # 创建主布局
-        main_widget = QWidget()
-        main_layout = QHBoxLayout(main_widget)
-        
-        # 创建侧边栏
+    
+        # 创建中心部件
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+    
+        # 主布局
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+    
+        # 1. 创建并添加标题栏
+        self.gxde_title_bar = GXDETitleBar(self)
+        main_layout.addWidget(self.gxde_title_bar)
+    
+        # 2. 创建内容区域
+        content_widget = QWidget()
+        content_layout = QHBoxLayout(content_widget)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+    
+        # 3. 创建侧边栏
         self.sidebar = QListWidget()
-        # 侧边栏宽度根据缩放因子调整
         self.sidebar.setFixedWidth(self.scaled(180))
         self.sidebar.setStyleSheet(f"""
             QListWidget {{
@@ -122,8 +263,8 @@ class HardwareManager(QMainWindow):
                 border-left: 3px solid #2CA7F8;
             }}
         """)
-        
-        # 添加侧边栏项目
+    
+        # 4. 添加侧边栏项目
         self.add_sidebar_item(self.tr("System"), "system")
         self.add_sidebar_item(self.tr("CPU"), "cpu")
         self.add_sidebar_item(self.tr("Memory"), "memory")
@@ -132,29 +273,11 @@ class HardwareManager(QMainWindow):
         self.add_sidebar_item(self.tr("Display"), "display")
         self.add_sidebar_item(self.tr("Sound"), "sound")
         self.add_sidebar_item(self.tr("Input Devices"), "dialog-input-devices")
-        
-        # 创建主内容区域
+    
+        # 5. 创建主内容区域
         self.stack = QStackedWidget()
-        
-        # 添加加载中的提示页面
-        self.loading_page = self.create_loading_page()
-        self.stack.addWidget(self.loading_page)
     
-        # 连接侧边栏选择事件
-        self.sidebar.currentRowChanged.connect(self.stack.setCurrentIndex)
-    
-        # 添加到主布局
-        main_layout.addWidget(self.sidebar)
-        main_layout.addWidget(self.stack, 1)
-    
-        # 设置中心部件
-        self.setCentralWidget(main_widget)
-    
-        # 默认显示加载页面，隐藏侧边栏
-        self.sidebar.hide()
-        self.stack.setCurrentIndex(0)
-
-        # 添加各个页面
+        # 6. 添加所有页面
         self.stack.addWidget(self.create_system_info_page())
         self.stack.addWidget(self.create_cpu_page())
         self.stack.addWidget(self.create_memory_page())
@@ -163,79 +286,31 @@ class HardwareManager(QMainWindow):
         self.stack.addWidget(self.create_display_page())
         self.stack.addWidget(self.create_sound_page())
         self.stack.addWidget(self.create_input_page())
-        
-        # 连接侧边栏选择事件
+    
+        # 7. 将侧边栏和堆栈窗口添加到内容布局
+        content_layout.addWidget(self.sidebar)
+        content_layout.addWidget(self.stack, 1)
+    
+        # 8. 将内容区域添加到主布局
+        main_layout.addWidget(content_widget, 1)
+    
+        # 9. 连接信号
         self.sidebar.currentRowChanged.connect(self.stack.setCurrentIndex)
-        
-        # 添加到主布局
-        main_layout.addWidget(self.sidebar)
-        main_layout.addWidget(self.stack, 1)
-        
-        # 设置中心部件
-        self.setCentralWidget(main_widget)
-        
-        # 默认选中第一个项目
         self.sidebar.setCurrentRow(0)
-        
-        # 添加右上角菜单按钮
-        self.create_menu_button()
-        
-        # 应用字体缩放
+    
+        # 10. 设置菜单
+        self.menu = QMenu()
+        export_action = self.menu.addAction(self.tr("Export all information to desktop"))
+        export_action.triggered.connect(self.export_all_info)
+        about_action = self.menu.addAction(self.tr("About"))
+        about_action.triggered.connect(self.show_about)
+        self.gxde_title_bar.menu_button.setMenu(self.menu)
+    
+        # 11. 应用字体缩放
         self.apply_font_scaling()
-
+    
+        # 12. 设置文本选择功能
         self.setup_text_selection()
-
-        QTimer.singleShot(100, self.load_real_pages)
-    
-    def create_loading_page(self):
-        """创建加载页面"""
-        widget = QWidget()
-
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
-        layout.setSpacing(self.scaled(10))
-    
-        layout.addStretch()
-
-        # 创建GIF动画标签
-        self.loading_gif_label = QLabel()
-    
-        gif_path = "/home/ocean/Downloads/loading.gif"
-    
-        self.loading_movie = QMovie(gif_path)
-        self.loading_gif_label.setMovie(self.loading_movie)
-        self.loading_movie.start()
-        
-        gif_size = self.scaled(150)
-        self.loading_gif_label.setFixedSize(gif_size, gif_size)
-        self.loading_movie.setScaledSize(QSize(gif_size, gif_size))
-
-        gif_layout = QHBoxLayout()
-        gif_layout.addStretch()
-        gif_layout.addWidget(self.loading_gif_label)
-        gif_layout.addStretch()
-        layout.addLayout(gif_layout)
-
-        layout.addStretch()
-        return widget
-    
-    def load_real_pages(self):
-        """加载实际页面"""
-        QTimer.singleShot(1500, self.finish_loading)
-
-    def finish_loading(self):
-        """完成加载并显示主界面"""
-
-        if hasattr(self, 'loading_movie'):
-            self.loading_movie.stop()
-
-        # 移除加载页面，显示实际内容
-        self.stack.removeWidget(self.loading_page)
-        self.loading_page.deleteLater()
-
-        # 显示侧边栏并选中第一个项目
-        self.sidebar.show()
-        self.sidebar.setCurrentRow(0)
 
     def setup_text_selection(self):
         """设置文本选中复制功能"""
@@ -248,7 +323,7 @@ class HardwareManager(QMainWindow):
             table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
             table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
             table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            table.customContextMenuRequested.connect(self.show_table_context_menu)  # 改为连接到一个显示菜单的函数
+            table.customContextMenuRequested.connect(self.show_table_context_menu)
 
     def show_table_context_menu(self, pos):
         """显示表格右键菜单"""
@@ -315,9 +390,6 @@ class HardwareManager(QMainWindow):
         # 清除缓存
         self.cache.clear()
         
-        # 窗口标题
-        self.setWindowTitle(self.tr("GXDE Hardware Manager"))
-    
         # 侧边栏项目
         sidebar_texts = [
             self.tr("System"), self.tr("CPU"), self.tr("Memory"), 
@@ -360,78 +432,6 @@ class HardwareManager(QMainWindow):
         else:
             self.stack.setCurrentIndex(0)  # 异常时默认选中第一个
 
-
-    def create_menu_button(self):
-        """创建右上角菜单按钮"""
-        # 创建菜单按钮
-        menu_button = QPushButton("☰")
-        menu_button.setFixedSize(self.scaled(30), self.scaled(30))
-        menu_button.setStyleSheet("""
-            QPushButton {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                font-size: 16px;
-                font-weight: bold;
-            }
-        """)
-        
-        # 创建菜单
-        menu = QMenu()
-        menu.setStyleSheet("""
-            QMenu {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-            }
-            QMenu::item {
-                padding: 5px 20px;
-            }
-        """)
-        
-        # 添加菜单项
-        export_action = menu.addAction(self.tr("Export all information to desktop"))
-        export_action.triggered.connect(self.export_all_info)
-    
-        about_action = menu.addAction(self.tr("About"))
-        about_action.triggered.connect(self.show_about)
-        # 设置按钮菜单
-        menu_button.setMenu(menu)
-        
-        # 将按钮添加到窗口的右上角
-        menu_button.setParent(self)
-        menu_button.move(self.width() - menu_button.width() - 10, 30)
-        
-        # 保存按钮引用，以便在窗口大小改变时调整位置
-        self.menu_button = menu_button
-
-        QTimer.singleShot(100, self.update_menu_button_position)
-
-    def update_menu_button_position(self):
-        """更新菜单按钮位置"""
-        if hasattr(self, 'menu_button') and self.menu_button:
-            # 计算正确的位置
-            x_pos = self.width() - self.menu_button.width() - 10
-            y_pos = 10  # 距离顶部10像素
-            self.menu_button.move(x_pos, y_pos)
-            self.menu_button.raise_()  # 确保按钮在最上层
-            self.menu_button.show()    # 确保按钮显示
-
-    def resizeEvent(self, event):
-        """重写窗口大小改变事件，确保菜单按钮始终在右上角"""
-        super().resizeEvent(event)
-        self.update_menu_button_position()
-
-    def showEvent(self, event):
-        """重写窗口显示事件，确保菜单按钮正确显示"""
-        super().showEvent(event)
-        # 窗口显示后更新菜单按钮位置
-        QTimer.singleShot(100, self.update_menu_button_position)
-        
-    def resizeEvent(self, event):
-        """重写窗口大小改变事件，确保菜单按钮始终在右上角"""
-        super().resizeEvent(event)
-        if hasattr(self, 'menu_button'):
-            self.menu_button.move(self.width() - self.menu_button.width() - 10, 30)
-        
     def export_all_info(self):
         """导出所有硬件信息到桌面"""
         # 清空缓存
@@ -577,28 +577,24 @@ class HardwareManager(QMainWindow):
     def update_hardware_info(self):
         """更新硬件信息"""
         current_index = self.stack.currentIndex()
-        
-        # 更新CPU信息
-        self.update_cpu_info()
-        
-        # 更新内存信息
-        self.update_memory_info()
-        
-        # 如果在网络页面，更新网络信息
+
+        # 更新网络信息
         if current_index == 4:
             self.update_network_info()
             
-        # 如果在存储页面，更新磁盘IO信息
+        # 更新磁盘IO信息
         if current_index == 3:
             self.update_disk_io_info()
             
-        # 如果在系统信息页面，更新启动时间
+        # 更新启动时间
         if current_index == 0:
             self.update_uptime()
             
-        # 如果在显示页面，更新分辨率信息
+        # 更新分辨率信息
         if current_index == 5:
             self.update_display_info()
+
+        self.update_memory_info()
     
     def add_sidebar_item(self, text, icon_name):
         """添加侧边栏项目"""
@@ -788,40 +784,6 @@ class HardwareManager(QMainWindow):
         driver_widget.setLayout(driver_layout)
         layout.addWidget(self.create_group_box(self.tr("CPU Driver Information"), driver_widget))
         
-        # CPU使用率
-        cpu_usage = QWidget()
-        cpu_usage_layout = QVBoxLayout()
-        cpu_usage_layout.setSpacing(self.scaled(8))
-        
-        # 总体使用率
-        self.cpu_total_bar = QProgressBar()
-        self.cpu_total_bar.setFixedHeight(self.scaled(25))
-        cpu_percent = psutil.cpu_percent(interval=0.1)
-        self.cpu_total_bar.setValue(int(cpu_percent))
-        self.cpu_total_bar.setFormat(self.tr("Total Usage: {}%").format(self.cpu_total_bar.value()))
-        cpu_usage_layout.addWidget(self.cpu_total_bar)
-        
-        # 各核心使用率
-        label = QLabel(self.tr("Core Usage:"))
-        cpu_usage_layout.addWidget(label)
-        
-        self.core_usage_layout = QGridLayout()
-        self.core_usage_layout.setSpacing(self.scaled(8))
-        self.cpu_core_bars = []
-        
-        # 初始化核心进度条
-        for i, percent in enumerate(psutil.cpu_percent(percpu=True, interval=0.1)):
-            core_bar = QProgressBar()
-            core_bar.setFixedHeight(self.scaled(25))
-            core_bar.setValue(int(percent))
-            core_bar.setFormat(self.tr("Core {}: {}%").format(i, core_bar.value()))
-            self.core_usage_layout.addWidget(core_bar, i // 2, i % 2)
-            self.cpu_core_bars.append(core_bar)
-        
-        cpu_usage_layout.addLayout(self.core_usage_layout)
-        cpu_usage.setLayout(cpu_usage_layout)
-        layout.addWidget(self.create_group_box(self.tr("CPU Usage"), cpu_usage))
-        
         layout.addStretch()
         widget.setWidget(content)
         return widget
@@ -832,20 +794,14 @@ class HardwareManager(QMainWindow):
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
         layout.setSpacing(self.scaled(10))
+
+        mem = psutil.virtual_memory() 
+        swap = psutil.swap_memory()
         
         # 内存使用情况
         mem_info = QWidget()
         mem_layout = QVBoxLayout()
         mem_layout.setSpacing(self.scaled(8))
-        
-        # 总内存信息
-        mem = psutil.virtual_memory()
-        
-        self.mem_total_bar = QProgressBar()
-        self.mem_total_bar.setFixedHeight(self.scaled(25))
-        self.mem_total_bar.setValue(int(mem.percent))
-        self.mem_total_bar.setFormat(self.tr("Memory Usage: {:.1f}% ({} / {})").format(mem.percent, self.format_size(mem.used), self.format_size(mem.total)))
-        mem_layout.addWidget(self.mem_total_bar)
         
         # 详细内存信息
         self.mem_details = QWidget()
@@ -893,13 +849,7 @@ class HardwareManager(QMainWindow):
         swap_layout.setSpacing(self.scaled(8))
         
         swap = psutil.swap_memory()
-        
-        self.swap_bar = QProgressBar()
-        self.swap_bar.setFixedHeight(self.scaled(25))
-        self.swap_bar.setValue(int(swap.percent))
-        self.swap_bar.setFormat(self.tr("Swap Usage: {:.1f}% ({} / {})").format(swap.percent, self.format_size(swap.used), self.format_size(swap.total)))
-        swap_layout.addWidget(self.swap_bar)
-        
+
         # 交换分区详细信息
         self.swap_details = QWidget()
         swap_details_layout = QFormLayout()
@@ -1307,51 +1257,20 @@ class HardwareManager(QMainWindow):
         
         layout.addStretch()
         return widget
-    
-    def update_cpu_info(self):
-        """更新CPU信息"""
-        # 更新CPU总体使用率
-        if self.cpu_total_bar:
-            cpu_percent = psutil.cpu_percent(interval=0.1)
-            self.cpu_total_bar.setValue(int(cpu_percent))
-            self.cpu_total_bar.setFormat(self.tr("Total Usage: {}%").format(int(cpu_percent)))
-        
-        # 更新各核心使用率
-        if self.cpu_core_bars:
-            core_percents = psutil.cpu_percent(percpu=True, interval=0.1)
-            for i, (bar, percent) in enumerate(zip(self.cpu_core_bars, core_percents)):
-                bar.setValue(int(percent))
-                bar.setFormat(self.tr("Core {}: {}%").format(i, int(percent)))
-        
-        # 更新当前频率
-        if hasattr(self, 'cpu_current_freq_label'):
-            cpu_freq = psutil.cpu_freq()
-            if cpu_freq and cpu_freq.current:
-                self.cpu_current_freq_label.setText(f"{cpu_freq.current:.2f} MHz")
-    
+
     def update_memory_info(self):
         """更新内存信息"""
-        # 更新内存使用率
-        if self.mem_total_bar:
-            mem = psutil.virtual_memory()
-            self.mem_total_bar.setValue(int(mem.percent))
-            self.mem_total_bar.setFormat(self.tr("Memory Usage: {:.1f}% ({} / {})").format(mem.percent, self.format_size(mem.used), self.format_size(mem.total)))
-            
-            # 更新内存详细信息
-            self.mem_used_label.setText(self.format_size(mem.used))
-            self.mem_free_label.setText(self.format_size(mem.free))
-            self.mem_available_label.setText(self.format_size(mem.available))
-            self.mem_cache_label.setText(self.format_size(mem.total - mem.used - mem.free))
+        # 更新内存详细信息
+        mem = psutil.virtual_memory()
+        self.mem_used_label.setText(self.format_size(mem.used))
+        self.mem_free_label.setText(self.format_size(mem.free))
+        self.mem_available_label.setText(self.format_size(mem.available))
+        self.mem_cache_label.setText(self.format_size(mem.total - mem.used - mem.free))
         
-        # 更新交换分区信息
-        if self.swap_bar:
-            swap = psutil.swap_memory()
-            self.swap_bar.setValue(int(swap.percent))
-            self.swap_bar.setFormat(self.tr("Swap Usage: {:.1f}% ({} / {})").format(swap.percent, self.format_size(swap.used), self.format_size(swap.total)))
-            
-            # 更新交换分区详细信息
-            self.swap_used_label.setText(self.format_size(swap.used))
-            self.swap_free_label.setText(self.format_size(swap.free))
+        swap = psutil.swap_memory()
+        # 更新交换分区详细信息
+        self.swap_used_label.setText(self.format_size(swap.used))
+        self.swap_free_label.setText(self.format_size(swap.free))
     
     def update_network_info(self):
         """更新网络信息"""
