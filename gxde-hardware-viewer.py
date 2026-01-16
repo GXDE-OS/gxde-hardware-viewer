@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QPoint
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.0"
+version = "2.5.1"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -67,9 +67,9 @@ class GXDETitleBar(QWidget):
                 background-color: grey;
             }}
             QPushButton:pressed {{
-                background-color: #103857;
+                background-color: #FBD6E2;
             }}
-        """)
+        """)# background-color: #103857;
         self.layout.addWidget(self.menu_button)
         
         # 4. 右侧：窗口控制按钮
@@ -120,9 +120,9 @@ class GXDETitleBar(QWidget):
                 background-color: grey;  
             }}
             QPushButton:pressed {{
-                background-color: #103857;
+                background-color: #FBD6E2;
             }}
-        """)
+        """)# background-color: #103857;
         return btn 
 
     def toggle_maximize(self):
@@ -250,8 +250,8 @@ class HardwareManager(QMainWindow):
         self.sidebar.setFixedWidth(self.scaled(180))
         self.sidebar.setStyleSheet(f"""
             QListWidget {{
-                border-right: 1px solid #2CA7F8;
-                padding-top: {self.scaled(10)}px;
+                border-right: none;
+                border-top: none;
             }}
             QListWidgetItem {{
                 height: {self.scaled(36)}px;
@@ -259,10 +259,12 @@ class HardwareManager(QMainWindow):
                 font-size: {self.scaled(14)}px;
             }}
             QListWidget::item:selected {{
-                color: #2CA7F8;
-                border-left: 3px solid #2CA7F8;
+                color: #E6004C;
+                selection-background-color: #F380A6;
+                border-left: 3px solid #E6004C;
             }}
-        """)
+        """)#color: #2CA7F8
+        #border-left: 3px solid #2CA7F8
     
         # 4. 添加侧边栏项目
         self.add_sidebar_item(self.tr("System"), "system")
@@ -727,11 +729,8 @@ class HardwareManager(QMainWindow):
         
     def create_cpu_page(self):
         """创建CPU信息页面"""
-        widget = QScrollArea()
-        widget.setWidgetResizable(True)
-        
-        content = QWidget()
-        layout = QVBoxLayout(content)
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
         layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
         layout.setSpacing(self.scaled(10))
         
@@ -785,7 +784,6 @@ class HardwareManager(QMainWindow):
         layout.addWidget(self.create_group_box(self.tr("CPU Driver Information"), driver_widget))
         
         layout.addStretch()
-        widget.setWidget(content)
         return widget
         
     def create_memory_page(self):
@@ -876,11 +874,8 @@ class HardwareManager(QMainWindow):
         
     def create_storage_page(self):
         """创建存储信息页面"""
-        widget = QScrollArea()
-        widget.setWidgetResizable(True)
-        
-        content = QWidget()
-        layout = QVBoxLayout(content)
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
         layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
         layout.setSpacing(self.scaled(10))
         
@@ -977,16 +972,12 @@ class HardwareManager(QMainWindow):
         layout.addWidget(self.create_group_box(self.tr("Disk I/O Statistics"), self.disk_io_widget))
         
         layout.addStretch()
-        widget.setWidget(content)
         return widget
         
     def create_network_page(self):
         """创建网络信息页面"""
-        widget = QScrollArea()
-        widget.setWidgetResizable(True)
-        
-        content = QWidget()
-        layout = QVBoxLayout(content)
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
         layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
         layout.setSpacing(self.scaled(10))
         
@@ -1089,7 +1080,6 @@ class HardwareManager(QMainWindow):
         layout.addWidget(self.create_group_box(self.tr("Network Traffic Statistics"), self.net_io_widget))
         
         layout.addStretch()
-        widget.setWidget(content)
         return widget
         
     def create_display_page(self):
