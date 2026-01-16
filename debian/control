@@ -1,7 +1,7 @@
 Source: gxde-hardware-viewer
 Section: utils
 Priority: optional
-Maintainer: ocean <a202128502@163.com>
+Maintainer: zeqi <a202128502@163.com>
 Rules-Requires-Root: no
 Build-Depends:
  debhelper-compat (= 13),
