@@ -1,3 +1,13 @@
+gxde-hardware-viewer (2.5.2) UNRELEASED; urgency=medium
+
+  [ zeqi ]
+  * 修改侧边栏系统信息选项图标
+  * 修改关于界面鸣谢按钮的效果
+  * 修复关于界面无正常显示系统徽标问题
+  * 修复部分中文翻译不完整问题
+
+ -- zeqi <a202128502@163.com>  Tue, 10 Feb 2026 15:44:45 +0800
+
 gxde-hardware-viewer (2.5.1) UNRELEASED; urgency=medium
 
   [ gfdgd_xi ]

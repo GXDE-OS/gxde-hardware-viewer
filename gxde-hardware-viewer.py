@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QPoint
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.1"
+version = "2.5.2"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -267,7 +267,7 @@ class HardwareManager(QMainWindow):
         #border-left: 3px solid #2CA7F8
     
         # 4. 添加侧边栏项目
-        self.add_sidebar_item(self.tr("System"), "system")
+        self.add_sidebar_item(self.tr("System"), "computer")
         self.add_sidebar_item(self.tr("CPU"), "cpu")
         self.add_sidebar_item(self.tr("Memory"), "memory")
         self.add_sidebar_item(self.tr("Storage"), "disk-quota")
@@ -1888,7 +1888,7 @@ class AboutDialog(QDialog):
         gxde_vertical_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         gxde_icon_label = QLabel()
-        gxde_logo_path = "/home/ocean/Desktop/软件/hardware-viewer/gxde-logo/gxde-logo.svg"
+        gxde_logo_path = "/usr/share/gxde-hardware-viewer/gxde-logo_new.png"
         gxde_pixmap = QPixmap(gxde_logo_path)
         if not gxde_pixmap.isNull():
             scaled_pixmap = gxde_pixmap.scaled(
@@ -1920,12 +1920,12 @@ class AboutDialog(QDialog):
             QPushButton {
                 border: none;
                 background-color: transparent;
-                color: #2980b9;
+                color: #E6014C;
                 text-decoration: underline;
                 font-size: 14px;
             }
-            QPushButton:hover { color: #3498db; }
-            QPushButton:pressed { color: #1f6391; }
+            QPushButton:hover { color: #F380A6; }
+            QPushButton:pressed { color: #E6014C; }
         """)
         thanks_button.clicked.connect(lambda: QMessageBox.information(self, self.tr("Acknowledgments"), self.tr("Thanks to all the open source software we've used and to you who are using it now")))
         layout.addWidget(thanks_button, alignment=Qt.AlignmentFlag.AlignCenter)
