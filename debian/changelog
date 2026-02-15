@@ -1,3 +1,10 @@
+gxde-hardware-viewer (2.5.3) UNRELEASED; urgency=medium
+
+  [ zeqi ]
+  * 新增驱动更新功能
+
+ -- zeqi <a202128502@163.com>  Sun, 15 Feb 2026 15:07:58 +0800
+
 gxde-hardware-viewer (2.5.2) UNRELEASED; urgency=medium
 
   [ zeqi ]
