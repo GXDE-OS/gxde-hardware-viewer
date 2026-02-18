@@ -12,20 +12,18 @@ import time
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
-                            QLabel, QGroupBox, QFormLayout, QScrollArea,
+                            QLabel, QGroupBox, QFormLayout,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QPoint, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.3"
+version = "2.5.4"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
-        self.dragging = False
-        self.drag_start_pos = QPoint()
         
         # 初始化缩放因子
         self.scaling_factor = parent.scaling_factor if hasattr(parent, 'scaling_factor') else 1.0
@@ -136,18 +134,15 @@ class GXDETitleBar(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.dragging = True
-            self.drag_start_pos = event.globalPosition().toPoint() - self.parent.frameGeometry().topLeft()
-            event.accept()
-
-    def mouseMoveEvent(self, event):
-        if self.dragging and event.buttons() == Qt.MouseButton.LeftButton:
-            self.parent.move(event.globalPosition().toPoint() - self.drag_start_pos)
-            event.accept()
-
-    def mouseReleaseEvent(self, event):
-        self.dragging = False
-        event.accept()
+            window = self.parent.windowHandle()
+            if window is not None:
+                # 如果窗口处于最大化状态，先还原再移动
+                if self.parent.isMaximized():
+                    self.parent.showNormal()
+                window.startSystemMove()
+                event.accept()
+                return
+        super().mousePressEvent(event)
 
 class CacheManager:
     """缓存管理器"""
@@ -631,18 +626,18 @@ class HardwareManager(QMainWindow):
         cached = self.cache.get(cache_key)
         if cached is not None:
             return cached
-            
+
+        name = ""
+        version = ""
         try:
             with open('/etc/os-release', 'r') as f:
                 for line in f:
-                    if line.startswith('PRETTY_NAME='):
-                        # 去除引号和换行符
-                        result = line.split('=')[1].strip().strip('"')
-                        self.cache.set(cache_key, result, 3600)
-                        return result
-            result = self.tr("Unknown system version")
-            self.cache.set(cache_key, result, 60)
-            return result
+                    if line.startswith('NAME='):
+                            name = line.split('=', 1)[1].strip().strip('"')
+                    elif line.startswith('VERSION='): 
+                        version = line.split('=', 1)[1].strip().strip('"')
+                    if name and version:
+                        break
         except FileNotFoundError:
             result = self.tr("Unable to get system version")
             self.cache.set(cache_key, result, 60)
@@ -651,6 +646,14 @@ class HardwareManager(QMainWindow):
             result = self.tr("Failed to retrieve: {}").format(str(e))
             self.cache.set(cache_key, result, 60)
             return result
+
+        if name and version:
+            result = f"{name} {version}"  
+        else:
+            result = self.tr("Unknown system version")
+
+        self.cache.set(cache_key, result, 3600)  
+        return result
         
     def create_system_info_page(self):
         """创建系统信息页面"""

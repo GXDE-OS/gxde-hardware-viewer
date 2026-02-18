@@ -1,3 +1,11 @@
+gxde-hardware-viewer (2.5.4) UNRELEASED; urgency=medium
+
+  [ zeqi ]
+  * 优化拖动手感及使之可以移出屏幕边缘
+  * 系统概览中操作系统项修改为显示系统大版本号+小版本号
+
+ -- zeqi <a202128502@163.com>  Wed, 18 Feb 2026 11:28:29 +0800
+
 gxde-hardware-viewer (2.5.3) UNRELEASED; urgency=medium
 
   [ zeqi ]
