@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.4"
+version = "2.5.5"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -443,9 +443,9 @@ class HardwareManager(QMainWindow):
             # 系统信息
             uname = platform.uname()
             info[self.tr('System Information')] = {
-                self.tr('System'): f"{uname.system} {uname.release} (GXDE)",
+                self.tr('System'): self.get_os_version()
                 self.tr('Host Name'): uname.node,
-                self.tr("Kernel"): uname.version,
+                self.tr("Kernel"): uname.release,
                 self.tr('Architecture'): uname.machine,
                 self.tr("Boot Time"): self.get_uptime()
             }
@@ -675,7 +675,7 @@ class HardwareManager(QMainWindow):
         
         sys_layout.addRow(self.tr("Operating System:"), QLabel(self.get_os_version()))
         sys_layout.addRow(self.tr("Hostname:"), QLabel(uname.node))
-        sys_layout.addRow(self.tr("Kernel Version:"), QLabel(uname.version))
+        sys_layout.addRow(self.tr("Kernel Version:"), QLabel(uname.release))
         sys_layout.addRow(self.tr("System Architecture:"), QLabel(uname.machine))
         
         # 启动时间标签
