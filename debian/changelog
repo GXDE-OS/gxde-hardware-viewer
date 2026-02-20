@@ -1,3 +1,11 @@
+gxde-hardware-viewer (2.5.5) UNRELEASED; urgency=medium
+
+  [ zeqi ]
+  * 修改内核版本获取方式，使amd64架构减少显示冗余信息，使其他架构能正常显示内核版本
+  * 同步导出信息的系统版本号和软件的系统概览的获取方式一致
+
+ -- zeqi <a202128502@163.com>  Fri, 20 Feb 2026 00:01:12 +0800
+
 gxde-hardware-viewer (2.5.4) UNRELEASED; urgency=medium
 
   [ zeqi ]
