@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import re
 import sys
 import platform
 import psutil
@@ -12,13 +13,13 @@ import time
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
-                            QLabel, QGroupBox, QFormLayout,
+                            QLabel, QGroupBox, QFormLayout, QTextEdit,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.5"
+version = "2.5.6"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -443,7 +444,7 @@ class HardwareManager(QMainWindow):
             # 系统信息
             uname = platform.uname()
             info[self.tr('System Information')] = {
-                self.tr('System'): self.get_os_version()
+                self.tr('System'): self.get_os_version(),
                 self.tr('Host Name'): uname.node,
                 self.tr("Kernel"): uname.release,
                 self.tr('Architecture'): uname.machine,
@@ -1283,9 +1284,9 @@ class HardwareManager(QMainWindow):
         self.list_widget.addItem(self.tr("Please click the 'Check for Updates' button to get available driver updates."))  
         layout.addWidget(self.list_widget)
 
-        update_btn = QPushButton(self.tr("Update"))
-        update_btn.clicked.connect(self.perform_update)
-        update_btn.setFixedSize(100, 30)
+        self.update_btn = QPushButton(self.tr("Update"))
+        self.update_btn.clicked.connect(self.perform_update)
+        self.update_btn.setFixedSize(100, 30)
 
         self.check_update_btn = QPushButton(self.tr("Check for updates"))
         self.check_update_btn.clicked.connect(self.on_check_updates_clicked)
@@ -1294,7 +1295,7 @@ class HardwareManager(QMainWindow):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
         button_layout.addWidget(self.check_update_btn)
-        button_layout.addWidget(update_btn)
+        button_layout.addWidget(self.update_btn)
 
         layout.addLayout(button_layout)
         layout.addStretch()
@@ -1305,9 +1306,21 @@ class HardwareManager(QMainWindow):
         self.check_update_btn.setEnabled(False)
         self.check_update_btn.setText(self.tr("Checking..."))
 
-        self.checker = UpdateChecker()  # 保存引用防止被回收
+        self.source_dialog = UpdateSourceProgressDialog(self)
+        self.source_dialog.finished_with_error.connect(self.on_update_source_error)
+        self.source_dialog.finished.connect(self.on_source_dialog_closed)  # 对话框关闭后启动检查
+        self.source_dialog.open()
+
+
+    def on_source_dialog_closed(self):
+        self.checker = UpdateChecker()
         self.checker.finished.connect(self.on_update_check_finished)
         self.checker.start()
+
+    def on_update_source_error(self, error_message):
+        self.check_update_btn.setEnabled(True)
+        self.check_update_btn.setText(self.tr("Check for updates"))
+        QMessageBox.critical(self, self.tr("Error"), error_message)
 
     def on_update_check_finished(self, driver_pkgs):
         """重新启用按钮"""
@@ -1333,8 +1346,19 @@ class HardwareManager(QMainWindow):
                 selected.append(item.text())
 
         if not selected:
-            QMessageBox.information(self, self.tr("Information"),self.tr("Please select the driver or kernel to update first"))
+            QMessageBox.information(self, self.tr("Information"),
+                                self.tr("Please select the driver or kernel to update first"))
             return
+
+        self.update_btn.setEnabled(False)
+        self.update_btn.setText(self.tr("Updating..."))
+
+        dialog = UpdateProgressDialog(selected, self)
+        dialog.exec()
+        self.on_check_updates_clicked()   
+
+        self.update_btn.setEnabled(True)
+        self.update_btn.setText(self.tr("Update"))
 
     def update_memory_info(self):
         """更新内存信息"""
@@ -1939,42 +1963,111 @@ class HardwareManager(QMainWindow):
 
 class UpdateChecker(QThread):
     """更新检查"""
-
     finished = pyqtSignal(list)  # 传递驱动列表
 
     def run(self):
-        subprocess.run(['pkexec', 'apt', 'update'])
-
-        # 2. 获取可升级包列表
-        result = subprocess.run(['apt', 'list', '--upgradable', '--no-color'],
+        # 获取可升级包列表
+        result = subprocess.run(['apt', 'list', '--upgradable'],
                                 capture_output=True, text=True)
         lines = result.stdout.splitlines()
+        print("Raw lines:", lines)
         packages = []
+        pattern = re.compile(r'^(\S+)/')
         for line in lines:
-            if '/' in line and 'upgradable' in line:
-                pkg = line.split('/')[0]
+            match = pattern.match(line)
+            if match:
+                pkg = match.group(1)
                 packages.append(pkg)
-
+        print("All upgradable packages:", packages)
         # 3. 过滤出驱动/内核相关的包
-        keywords = ['linux', 'nvidia', 'firmware', 'microcode', 'bluez']
+        keywords = ['linux', 'nvidia', 'firmware', 'microcode', 'bluez', 'libnss3']
         driver_pkgs = [p for p in packages if any(k in p for k in keywords)]
-
+        print("Filtered driver packages:", driver_pkgs)
         self.finished.emit(driver_pkgs)
 
-class UpdateInstaller(QThread):
-    finished = pyqtSignal(bool, str) 
+class UpdateSourceProgressDialog(QDialog):
 
-    def __init__(self, packages):
-        super().__init__()
-        self.packages = packages
+    finished_with_error = pyqtSignal(str)  
 
-    def run(self):
-        cmd = ['pkexec', 'apt', 'install', '--only-upgrade', '-y'] + self.packages
-        try:
-            subprocess.run(cmd, check=True)
-            self.finished.emit(True, "更新成功")
-        except subprocess.CalledProcessError as e:
-            self.finished.emit(False, f"更新失败: {e}")
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(self.tr("Updating software sources"))
+        self.setModal(True)
+        self.resize(500, 300)
+
+        layout = QVBoxLayout(self)
+        self.text_edit = QTextEdit()
+        self.text_edit.setReadOnly(True)
+        layout.addWidget(self.text_edit)
+
+        self.process = QProcess(self)
+        self.process.readyReadStandardOutput.connect(self.handle_stdout)
+        self.process.readyReadStandardError.connect(self.handle_stderr)
+        self.process.finished.connect(self.handle_finished)
+
+        cmd = ['pkexec', 'apt', 'update']
+        self.process.start(cmd[0], cmd[1:])
+
+    def handle_stdout(self):
+        data = self.process.readAllStandardOutput().data().decode()
+        self.text_edit.append(data)
+
+    def handle_stderr(self):
+        data = self.process.readAllStandardError().data().decode()
+        self.text_edit.append(data)
+
+    def handle_finished(self, exit_code, exit_status):
+        if exit_code != 0:
+            error_msg = self.tr("Failed to update the software source. The operation was canceled or you do not have sufficient permissions.")
+            stderr = self.process.readAllStandardError().data().decode()
+            if stderr:
+                error_msg += f"\n\n{stderr}"
+            self.finished_with_error.emit(error_msg)
+        self.accept()   
+
+class UpdateProgressDialog(QDialog):
+    def __init__(self, packages, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(self.tr("Update Progress"))
+        self.setModal(True)
+        self.resize(600, 400)
+
+        layout = QVBoxLayout(self)
+
+        self.text_edit = QTextEdit()
+        self.text_edit.setReadOnly(True)
+        layout.addWidget(self.text_edit)
+
+        self.close_btn = QPushButton(self.tr("Close"))
+        self.close_btn.setEnabled(False)
+        self.close_btn.clicked.connect(self.accept)
+        layout.addWidget(self.close_btn)
+
+        self.process = QProcess(self)
+        self.process.readyReadStandardOutput.connect(self.handle_stdout)
+        self.process.readyReadStandardError.connect(self.handle_stderr)
+        self.process.finished.connect(self.handle_finished)
+
+        cmd = ['pkexec', 'apt', 'install', '--only-upgrade', '-y'] + packages
+        self.process.start(cmd[0], cmd[1:])
+
+    def handle_stdout(self):
+        data = self.process.readAllStandardOutput().data().decode()
+        self.text_edit.append(data)
+
+    def handle_stderr(self):
+        data = self.process.readAllStandardError().data().decode()
+        self.text_edit.append(data)
+
+    def handle_finished(self, exit_code, exit_status):
+        if exit_code == 0:
+            self.text_edit.append(self.tr("\n✅ Update successful！"))
+        else:
+            self.text_edit.append(self.tr("❌ Update failed. Please check the output. If the problem cannot be resolved,"
+                                          "please paste the error onto the forum or QQ group.\n" 
+                                          "forum：https://bbs.spark-app.store/\n"
+                                          "QQ group：712629637\n"))
+        self.close_btn.setEnabled(True)
 
 class AboutDialog(QDialog):
     """关于对话框"""
