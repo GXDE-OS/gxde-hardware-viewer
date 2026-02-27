@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.6"
+version = "2.5.6-1"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -1967,7 +1967,7 @@ class UpdateChecker(QThread):
 
     def run(self):
         # 获取可升级包列表
-        result = subprocess.run(['apt', 'list', '--upgradable'],
+        result = subprocess.run(['aptss', 'list', '--upgradable'],
                                 capture_output=True, text=True)
         lines = result.stdout.splitlines()
         print("Raw lines:", lines)
@@ -1980,7 +1980,7 @@ class UpdateChecker(QThread):
                 packages.append(pkg)
         print("All upgradable packages:", packages)
         # 3. 过滤出驱动/内核相关的包
-        keywords = ['linux', 'nvidia', 'firmware', 'microcode', 'bluez', 'libnss3']
+        keywords = ['linux', 'nvidia', 'firmware', 'microcode', 'bluez']
         driver_pkgs = [p for p in packages if any(k in p for k in keywords)]
         print("Filtered driver packages:", driver_pkgs)
         self.finished.emit(driver_pkgs)
@@ -2005,7 +2005,7 @@ class UpdateSourceProgressDialog(QDialog):
         self.process.readyReadStandardError.connect(self.handle_stderr)
         self.process.finished.connect(self.handle_finished)
 
-        cmd = ['pkexec', 'apt', 'update']
+        cmd = ['pkexec', 'aptss', 'update']
         self.process.start(cmd[0], cmd[1:])
 
     def handle_stdout(self):
@@ -2048,7 +2048,7 @@ class UpdateProgressDialog(QDialog):
         self.process.readyReadStandardError.connect(self.handle_stderr)
         self.process.finished.connect(self.handle_finished)
 
-        cmd = ['pkexec', 'apt', 'install', '--only-upgrade', '-y'] + packages
+        cmd = ['pkexec', 'aptss', 'install', '--only-upgrade', '-y'] + packages
         self.process.start(cmd[0], cmd[1:])
 
     def handle_stdout(self):
