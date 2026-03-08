@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.6-1"
+version = "2.5.7"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -61,6 +61,10 @@ class GXDETitleBar(QWidget):
                 border-radius: {self.scaled(4)}px;
                 background-color: transparent;
                 font-size: {self.scaled(16)}px;
+            }}
+            QPushButton::menu-indicator {{
+                image: none;
+                width: 0px;
             }}
             QPushButton:hover {{
                 background-color: grey;
@@ -1111,6 +1115,8 @@ class HardwareManager(QMainWindow):
         display_layout.addRow(self.tr("Resolution:"), self.resolution_label)
         display_layout.addRow(self.tr("Color Depth:"), QLabel(self.get_color_depth()))
         display_layout.addRow(self.tr("Refresh Rate:"), QLabel(self.get_refresh_rate()))
+        display_layout.addRow(self.tr("VRAM:"), QLabel(self.get_vram()))
+        display_layout.addRow(self.tr("Remaining VRAM:"), QLabel(self.get_remaining_vram()))
 
         self.display_info.setLayout(display_layout)
         layout.addWidget(self.create_group_box(self.tr("Display Devices"), self.display_info))
@@ -1534,7 +1540,27 @@ class HardwareManager(QMainWindow):
             return "60 Hz"
         except:
             return "60 Hz"
-        
+    
+    def get_vram(self):
+        try:
+            result = subprocess.run(['glxinfo | grep -i "video memory"'], shell=True, capture_output=True, text=True)
+            output = result.stdout
+            for line in output.split('\n'):
+                if 'Video memory' in line:
+                    return line.split(':')[1].strip()
+        except:
+            return 'Unknown video memory capacity'   
+
+    def get_remaining_vram(self):
+        try:
+            result = subprocess.run(['glxinfo | grep -i "video memory"'], shell=True, capture_output=True, text=True)
+            output = result.stdout
+            for line in output.split('\n'):
+                if 'Currently available dedicated video memory' in line:
+                    return line.split(':')[1].strip()
+        except:
+            return 'Unknown Remaining VRAM' 
+            
     def format_size(self, size):
         """格式化字节大小为人类可读的形式"""
         if size <= 0:
@@ -1808,7 +1834,7 @@ class HardwareManager(QMainWindow):
             return drivers
         except Exception as e:
             return {self.tr('Error'): self.tr('Unable to get display driver information: {}').format(str(e))}
-    
+        
     def get_sound_devices_info(self):
         """获取声音设备信息"""
         devices = {'output': [], 'input': []}
