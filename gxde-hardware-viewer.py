@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 
-version = "2.5.7"
+version = "2.5.7-1"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -1115,8 +1115,9 @@ class HardwareManager(QMainWindow):
         display_layout.addRow(self.tr("Resolution:"), self.resolution_label)
         display_layout.addRow(self.tr("Color Depth:"), QLabel(self.get_color_depth()))
         display_layout.addRow(self.tr("Refresh Rate:"), QLabel(self.get_refresh_rate()))
-        display_layout.addRow(self.tr("VRAM:"), QLabel(self.get_vram()))
-        display_layout.addRow(self.tr("Remaining VRAM:"), QLabel(self.get_remaining_vram()))
+        total_vram, available_vram = self.get_vram_info()
+        display_layout.addRow(self.tr("VRAM:"), QLabel(self.format_size(total_vram)))
+        display_layout.addRow(self.tr("Remaining VRAM:"), QLabel(self.format_size(available_vram)))
 
         self.display_info.setLayout(display_layout)
         layout.addWidget(self.create_group_box(self.tr("Display Devices"), self.display_info))
@@ -1541,25 +1542,63 @@ class HardwareManager(QMainWindow):
         except:
             return "60 Hz"
     
-    def get_vram(self):
+    def get_vram_info(self):
+        total = available = 0
         try:
-            result = subprocess.run(['glxinfo | grep -i "video memory"'], shell=True, capture_output=True, text=True)
-            output = result.stdout
-            for line in output.split('\n'):
-                if 'Video memory' in line:
-                    return line.split(':')[1].strip()
+            # 先nvidia
+            result = subprocess.run(['nvidia-smi', '--query-gpu=memory.total,memory.used', '--format=csv,noheader,nounits'],
+                                    capture_output=True, text=True)
+            if result.returncode == 0:
+                parts = result.stdout.strip().split(',')
+                if len(parts) >= 2:
+                    total = int(parts[0]) * 1024 * 1024   
+                    used = int(parts[1]) * 1024 * 1024
+                    available = total - used
+                    return total, available
         except:
-            return 'Unknown video memory capacity'   
+            pass
 
-    def get_remaining_vram(self):
         try:
-            result = subprocess.run(['glxinfo | grep -i "video memory"'], shell=True, capture_output=True, text=True)
-            output = result.stdout
-            for line in output.split('\n'):
-                if 'Currently available dedicated video memory' in line:
-                    return line.split(':')[1].strip()
+            # 再尝试AMD
+            with open('/sys/class/drm/card0/device/mem_info_vram_total', 'r') as f:
+                total = int(f.read().strip())
+            with open('/sys/class/drm/card0/device/mem_info_vram_used', 'r') as f:
+                used = int(f.read().strip())
+                available = total - used
+                return total, available
         except:
-            return 'Unknown Remaining VRAM' 
+            pass
+
+        # 最后glxinfo
+        try:
+            out = subprocess.run(['glxinfo'], capture_output=True, text=True).stdout
+            for line in out.splitlines():
+                low = line.lower()
+                if 'video memory:' in low:
+                    parts = line.split(':', 1)[1].strip().split()
+                    if parts:
+                        total = self._convert_to_bytes(float(parts[0]), parts[1] if len(parts) > 1 else 'B')
+                elif 'dedicated video memory' in low:
+                    parts = line.split(':', 1)[1].strip().split()
+                    if parts:
+                        available = self._convert_to_bytes(float(parts[0]), parts[1] if len(parts) > 1 else 'B')
+        except:
+            pass
+
+        return total, available
+
+    def _convert_to_bytes(self, value, unit):
+        unit = unit.upper()
+        if unit == 'KB':
+            return int(value * 1024)
+        elif unit == 'MB':
+            return int(value * 1024 * 1024)
+        elif unit == 'GB':
+            return int(value * 1024 * 1024 * 1024)
+        elif unit == 'TB':
+            return int(value * 1024 * 1024 * 1024 * 1024)
+        else:
+            return int(value)
             
     def format_size(self, size):
         """格式化字节大小为人类可读的形式"""
