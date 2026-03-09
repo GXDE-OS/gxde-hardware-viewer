@@ -1101,26 +1101,107 @@ class HardwareManager(QMainWindow):
         
         # 显示设备信息
         self.display_info = QWidget()
-        display_layout = QFormLayout()
-        display_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
-        display_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        display_layout.setHorizontalSpacing(self.scaled(15))
-        display_layout.setVerticalSpacing(self.scaled(8))
+        display_layout = QVBoxLayout()
+        display_layout.setSpacing(self.scaled(10))
         
-        # 获取显卡信息
+        # 显卡信息
         gpu_info = self.get_gpu_info()
-        self.resolution_label = QLabel(self.get_screen_resolution())
+        gpu_label = QLabel(f"<b>{self.tr('Graphics Card:')}</b> {gpu_info}")
+        gpu_label.setStyleSheet(f"""
+            font-size: {self.scaled(12)}px;
+            color: palette(text);
+            background-color: transparent;
+        """)
+        display_layout.addWidget(gpu_label)
         
-        display_layout.addRow(self.tr("Graphics Card:"), QLabel(gpu_info))
-        display_layout.addRow(self.tr("Resolution:"), self.resolution_label)
-        display_layout.addRow(self.tr("Color Depth:"), QLabel(self.get_color_depth()))
-        display_layout.addRow(self.tr("Refresh Rate:"), QLabel(self.get_refresh_rate()))
+        # VRAM信息
         total_vram, available_vram = self.get_vram_info()
-        display_layout.addRow(self.tr("VRAM:"), QLabel(self.format_size(total_vram)))
-        display_layout.addRow(self.tr("Remaining VRAM:"), QLabel(self.format_size(available_vram)))
-
+        vram_layout = QHBoxLayout()
+        vram_layout.setSpacing(self.scaled(20))
+        
+        total_vram_label = QLabel(f"<b>{self.tr('Total VRAM:')}</b> {self.format_size(total_vram)}")
+        available_vram_label = QLabel(f"<b>{self.tr('Available VRAM:')}</b> {self.format_size(available_vram)}")
+        
+        total_vram_label.setStyleSheet(f"""
+            font-size: {self.scaled(12)}px;
+            color: palette(text);
+            background-color: transparent;
+        """)
+        available_vram_label.setStyleSheet(f"""
+            font-size: {self.scaled(12)}px;
+            color: palette(text);
+            background-color: transparent;
+        """)
+        
+        vram_layout.addWidget(total_vram_label)
+        vram_layout.addWidget(available_vram_label)
+        vram_layout.addStretch()
+        display_layout.addLayout(vram_layout)
+        
         self.display_info.setLayout(display_layout)
-        layout.addWidget(self.create_group_box(self.tr("Display Devices"), self.display_info))
+        layout.addWidget(self.create_group_box(self.tr("Graphics Information"), self.display_info))
+        
+        # 多屏幕信息表格
+        self.screens_table = QTableWidget()
+        self.screens_table.setColumnCount(4)
+        self.screens_table.setHorizontalHeaderLabels([
+            self.tr("Screen Name"), 
+            self.tr("Resolution"), 
+            self.tr("Color Depth"), 
+            self.tr("Refresh Rate")
+        ])
+        
+        # 设置表格样式 - 支持深色主题
+        self.screens_table.setStyleSheet(f"""
+            QTableWidget {{
+                gridline-color: palette(mid);
+                selection-background-color: palette(highlight);
+                selection-color: palette(highlighted-text);
+                background-color: palette(base);
+                color: palette(text);
+                font-size: {self.scaled(12)}px;
+                border: 1px solid palette(dark);
+                border-radius: {self.scaled(4)}px;
+            }}
+            QHeaderView::section {{
+                background-color: palette(window);
+                color: palette(text);
+                padding: {self.scaled(8)}px;
+                border: 1px solid palette(dark);
+                border-bottom: 2px solid palette(highlight);
+                font-weight: bold;
+                font-size: {self.scaled(12)}px;
+            }}
+            QTableWidget::item {{
+                padding: {self.scaled(6)}px;
+                border-bottom: 1px solid palette(alternate-base);
+                color: palette(text);
+                background-color: transparent;
+            }}
+            QTableWidget::item:selected {{
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }}
+            QTableWidget::item:alternate {{
+                background-color: palette(alternate-base);
+            }}
+            /* 确保在深色主题下有足够的对比度 */
+            QTableWidget::item:hover {{
+                background-color: palette(highlight).lighter(120);
+            }}
+        """)
+        
+        # 设置表格属性
+        self.screens_table.setAlternatingRowColors(True)
+        self.screens_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.screens_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.screens_table.horizontalHeader().setStretchLastSection(True)
+        self.screens_table.verticalHeader().setVisible(False)
+        
+        # 填充屏幕数据
+        self.update_screens_table()
+        
+        layout.addWidget(self.create_group_box(self.tr("Connected Displays"), self.screens_table))
         
         # 显示驱动信息
         display_drivers = self.get_display_driver_info()
@@ -1408,8 +1489,76 @@ class HardwareManager(QMainWindow):
     
     def update_display_info(self):
         """更新显示信息"""
-        if hasattr(self, 'resolution_label'):
-            self.resolution_label.setText(self.get_screen_resolution())
+        if hasattr(self, 'screens_table'):
+            self.update_screens_table()
+    
+    def update_screens_table(self):
+        """更新屏幕信息表格"""
+        try:
+            # 获取屏幕数据
+            resolutions = self.get_screen_resolution().split('\n')
+            color_depths = self.get_color_depth().split('\n')
+            refresh_rates = self.get_refresh_rate().split('\n')
+            
+            # 确定行数
+            max_rows = max(len(resolutions), len(color_depths), len(refresh_rates))
+            self.screens_table.setRowCount(max_rows)
+            
+            for row in range(max_rows):
+                # 屏幕名称
+                screen_name = ""
+                if row < len(resolutions) and ':' in resolutions[row]:
+                    screen_name = resolutions[row].split(':')[0].strip()
+                elif row == 0:
+                    screen_name = self.tr("Primary Screen")
+                else:
+                    screen_name = f"{self.tr('Screen')} {row + 1}"
+                
+                # 分辨率
+                resolution = ""
+                if row < len(resolutions):
+                    if ':' in resolutions[row]:
+                        resolution = resolutions[row].split(':', 1)[1].strip()
+                    else:
+                        resolution = resolutions[row].strip()
+                
+                # 颜色深度
+                color_depth = ""
+                if row < len(color_depths):
+                    if ':' in color_depths[row]:
+                        color_depth = color_depths[row].split(':', 1)[1].strip()
+                    else:
+                        color_depth = color_depths[row].strip()
+                
+                # 刷新率
+                refresh_rate = ""
+                if row < len(refresh_rates):
+                    if ':' in refresh_rates[row]:
+                        refresh_rate = refresh_rates[row].split(':', 1)[1].strip()
+                    else:
+                        refresh_rate = refresh_rates[row].strip()
+                
+                # 设置表格项
+                self.screens_table.setItem(row, 0, QTableWidgetItem(screen_name))
+                self.screens_table.setItem(row, 1, QTableWidgetItem(resolution))
+                self.screens_table.setItem(row, 2, QTableWidgetItem(color_depth))
+                self.screens_table.setItem(row, 3, QTableWidgetItem(refresh_rate))
+            
+            # 调整列宽
+            self.screens_table.resizeColumnsToContents()
+            self.screens_table.setColumnWidth(0, max(120, self.screens_table.columnWidth(0)))  # 屏幕名称列最小宽度
+            self.screens_table.setColumnWidth(1, max(150, self.screens_table.columnWidth(1)))  # 分辨率列最小宽度
+            self.screens_table.setColumnWidth(2, max(100, self.screens_table.columnWidth(2)))  # 颜色深度列最小宽度
+            self.screens_table.setColumnWidth(3, max(100, self.screens_table.columnWidth(3)))  # 刷新率列最小宽度
+            
+        except Exception as e:
+            print(f"Error updating screens table: {e}")
+            # 如果出错，至少显示一个空行
+            self.screens_table.setRowCount(1)
+            self.screens_table.setItem(0, 0, QTableWidgetItem(self.tr("Unable to get screen information")))
+            self.screens_table.setItem(0, 1, QTableWidgetItem(""))
+            self.screens_table.setItem(0, 2, QTableWidgetItem(""))
+            self.screens_table.setItem(0, 3, QTableWidgetItem(""))
     
     def get_cpu_model(self):
         """获取CPU型号"""
@@ -1478,26 +1627,35 @@ class HardwareManager(QMainWindow):
             result = subprocess.run(['xrandr'], capture_output=True, text=True)
             output = result.stdout
             
-            # 查找当前活跃的显示模式
+            screens = []
+            current_display = None
+            
             for line in output.split('\n'):
-                if '*' in line and '+' in line:  # 包含*表示当前分辨率，+表示首选分辨率
+                line = line.strip()
+                if ' connected' in line:
+                    # 找到连接的显示器
+                    parts = line.split()
+                    current_display = parts[0]
+                elif current_display and '*' in line:
+                    # 找到当前分辨率
                     parts = line.strip().split()
                     for part in parts:
-                        if 'x' in part and part.replace('x', '').isdigit():
-                            # 同时获取显示器名称
-                            display_name = None
-                            for l in output.split('\n'):
-                                if ' connected' in l and part in output.split('\n')[output.split('\n').index(l)+1]:
-                                    display_name = l.split()[0]
-                                    break
-                            if display_name:
-                                return f"{display_name}: {part}"
-                            else:
-                                return part
+                        if 'x' in part and part.replace('x', '').replace('+', '').isdigit():
+                            resolution = part.split('+')[0]  # 移除+号
+                            screens.append(f"{current_display}: {resolution}")
+                            break
             
-            # Qt的方法备选
-            screen_geometry = QApplication.primaryScreen().geometry()
-            return f"{screen_geometry.width()} x {screen_geometry.height()}"
+            if screens:
+                return '\n'.join(screens)
+            
+            # Qt的方法备选 - 获取所有屏幕
+            all_screens = []
+            for i, screen in enumerate(QApplication.screens()):
+                geometry = screen.geometry()
+                name = screen.name() or f"Screen {i+1}"
+                all_screens.append(f"{name}: {geometry.width()} x {geometry.height()}")
+            
+            return '\n'.join(all_screens) if all_screens else f"{QApplication.primaryScreen().geometry().width()} x {QApplication.primaryScreen().geometry().height()}"
         except Exception as e:
             print(self.tr("Failed to get resolution: {}").format(e))
             try:
@@ -1510,16 +1668,23 @@ class HardwareManager(QMainWindow):
     def get_color_depth(self):
         """获取颜色深度"""
         try:
-            # 通过xwininfo命令获取颜色深度
+            # 通过xwininfo命令获取颜色深度（根窗口）
             result = subprocess.run(['xwininfo', '-root'], capture_output=True, text=True)
             output = result.stdout
             
             for line in output.split('\n'):
                 if 'Depth' in line:
-                    return self.tr("{} bits").format(line.split(':')[1].strip())
+                    depth = line.split(':')[1].strip()
+                    return self.tr("{} bits").format(depth)
             
-            # 备选方案
-            return self.tr("32 bits")
+            # 备选方案 - 尝试获取所有屏幕的颜色深度
+            screens_info = []
+            for i, screen in enumerate(QApplication.screens()):
+                depth = screen.depth()
+                name = screen.name() or f"Screen {i+1}"
+                screens_info.append(f"{name}: {depth} bits")
+            
+            return '\n'.join(screens_info) if screens_info else self.tr("32 bits")
         except:
             return self.tr("32 bits")
     
@@ -1530,15 +1695,31 @@ class HardwareManager(QMainWindow):
             result = subprocess.run(['xrandr'], capture_output=True, text=True)
             output = result.stdout
             
+            refresh_rates = []
+            current_display = None
+            
             for line in output.split('\n'):
-                if '*' in line:  # 当前活跃模式
+                line = line.strip()
+                if ' connected' in line:
+                    current_display = line.split()[0]
+                elif current_display and '*' in line:
                     parts = line.strip().split()
                     for part in parts:
                         if 'Hz' in part:
-                            return part
+                            refresh_rates.append(f"{current_display}: {part}")
+                            break
             
-            # 备选方案
-            return "60 Hz"
+            if refresh_rates:
+                return '\n'.join(refresh_rates)
+            
+            # 备选方案 - Qt方法
+            screens_info = []
+            for i, screen in enumerate(QApplication.screens()):
+                refresh = screen.refreshRate()
+                name = screen.name() or f"Screen {i+1}"
+                screens_info.append(f"{name}: {refresh:.1f} Hz")
+            
+            return '\n'.join(screens_info) if screens_info else "60 Hz"
         except:
             return "60 Hz"
     

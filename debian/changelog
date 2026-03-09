@@ -1,11 +1,14 @@
-gxde-hardware-viewer (2.5.7-1) UNRELEASED; urgency=medium
+gxde-hardware-viewer (2.5.8) UNRELEASED; urgency=medium
 
   [ zeqi ]
   * 显示页新增显存大小和剩余显存
   * 去除菜单按钮的箭头
   * 优化显存大小和剩余大小显示功能
 
- -- zeqi <a202128502@163.com>  Sun, 9 Mar 2026 21:52:22 +0800
+  [ gfdgd_xi ]
+  * 新增多显示器信息显示
+
+ -- gfdgd_xi <3025613752@qq.com>  Mon, 09 Mar 2026 22:35:35 +0800
 
 gxde-hardware-viewer (2.5.6-1) UNRELEASED; urgency=medium
 
