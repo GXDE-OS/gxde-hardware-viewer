@@ -17,9 +17,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess
-from PyQt6.QtGui import QIcon, QFont, QPixmap
+from PyQt6.QtGui import QColor, QIcon, QFont, QPalette, QPixmap
 
-version = "2.5.7-1"
+version = "2.5.9"
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -70,14 +70,16 @@ class GXDETitleBar(QWidget):
                 background-color: grey;
             }}
             QPushButton:pressed {{
-                background-color: #FBD6E2;
+                color: white;
+                background-color: #F380A6
             }}
-        """)# background-color: #103857;
+        """)
         self.layout.addWidget(self.menu_button)
         
         # 4. 右侧：窗口控制按钮
         self.min_btn = self.create_gxde_control_btn("—")
         self.max_btn = self.create_gxde_control_btn("□")
+
         self.close_btn = self.create_gxde_control_btn("×")
         # 关闭按钮样式
         self.close_btn.setStyleSheet(f"""
@@ -88,7 +90,7 @@ class GXDETitleBar(QWidget):
                 font-size: {self.scaled(14)}px;
             }}
             QPushButton:hover {{
-                background-color: #ff4444;
+                background-color: #E6004C;
                 color: white;
             }}
             QPushButton:pressed {{
@@ -120,12 +122,13 @@ class GXDETitleBar(QWidget):
                 font-size: {self.scaled(14)}px;
             }}
             QPushButton:hover {{
-                background-color: grey;  
+                background-color: grey;
             }}
             QPushButton:pressed {{
-                background-color: #FBD6E2;
+                color: white;
+                background-color: #F380A6
             }}
-        """)# background-color: #103857;
+        """)
         return btn 
 
     def toggle_maximize(self):
@@ -193,6 +196,45 @@ class HardwareManager(QMainWindow):
     
         # 初始化缩放因子
         self.init_scaling_factor()
+
+        self.table_style = f"""
+            QTableWidget {{
+                gridline-color: palette(mid);
+                selection-background-color: palette(highlight);
+                selection-color: palette(highlighted-text);
+                background-color: palette(base);
+                color: palette(text);
+                font-size: {self.scaled(12)}px;
+                border: 1px solid palette(dark);
+                border-radius: {self.scaled(4)}px;
+            }}
+            QHeaderView::section {{
+                background-color: palette(window);
+                color: palette(text);
+                padding: {self.scaled(8)}px;
+                border: 1px solid palette(dark);
+                border-bottom: 2px solid palette(highlight);
+                font-weight: bold;
+                font-size: {self.scaled(12)}px;
+            }}
+            QTableWidget::item {{
+                padding: {self.scaled(6)}px;
+                border-bottom: 1px solid palette(alternate-base);
+                color: palette(text);
+                background-color: transparent;
+            }}
+            QTableWidget::item:selected {{
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }}
+            QTableWidget::item:alternate {{
+                background-color: palette(alternate-base);
+            }}
+            /* 确保在深色主题下有足够的对比度 */
+            QTableWidget::item:hover {{
+                background-color: palette(highlight).lighter(120);
+            }}
+        """
     
         # 创建用户界面
         self.initUI()
@@ -248,8 +290,10 @@ class HardwareManager(QMainWindow):
         # 3. 创建侧边栏
         self.sidebar = QListWidget()
         self.sidebar.setFixedWidth(self.scaled(180))
+        self.sidebar.setSpacing(self.scaled(2))
         self.sidebar.setStyleSheet(f"""
             QListWidget {{
+                padding-top: {self.scaled(10)}px;
                 border-right: none;
                 border-top: none;
             }}
@@ -263,8 +307,11 @@ class HardwareManager(QMainWindow):
                 selection-background-color: #F380A6;
                 border-left: 3px solid #E6004C;
             }}
-        """)#color: #2CA7F8
-        #border-left: 3px solid #2CA7F8
+            QListWidget::item:hover:!selected {{
+                color: grey;
+                border-left: 3px solid grey;
+            }}
+        """)
     
         # 4. 添加侧边栏项目
         self.add_sidebar_item(self.tr("System"), "computer")
@@ -707,18 +754,11 @@ class HardwareManager(QMainWindow):
         hw_layout.addRow(self.tr("Processor:"), QLabel(self.tr("{} ({} cores {} threads)").format(cpu_model, cpu_count, logical_cpu)))
         hw_layout.addRow(self.tr("Total Memory:"), QLabel(mem_total))
         
-        # 获取磁盘总容量
-        disk_total = 0
-        for part in psutil.disk_partitions():
-            if 'cdrom' in part.opts or part.fstype == '':
-                continue
-            try:
-                disk_usage = psutil.disk_usage(part.mountpoint)
-                disk_total += disk_usage.total
-            except PermissionError:
-                continue
-        
-        hw_layout.addRow(self.tr("Total Disk Capacity:"), QLabel(self.format_size(disk_total)))
+        self.disk_list_label = QLabel()
+        self.disk_list_label.setWordWrap(True)
+        self.disk_list_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.disk_list_label.setCursor(Qt.CursorShape.IBeamCursor)
+        hw_layout.addRow(self.tr("Disks: "), self.disk_list_label)
 
         hw_info.setLayout(hw_layout)
         layout.addWidget(self.create_group_box(self.tr("Hardware Overview"), hw_info))
@@ -735,6 +775,8 @@ class HardwareManager(QMainWindow):
         layout.addWidget(self.create_group_box(self.tr("Loaded Kernel Modules"), modules_widget))
         
         layout.addStretch()
+
+        self.update_physical_disks_label()
         return widget
         
     def create_cpu_page(self):
@@ -894,10 +936,12 @@ class HardwareManager(QMainWindow):
         disk_table.setColumnCount(5)
         disk_table.setHorizontalHeaderLabels([self.tr("Device"), self.tr("Mount Point"), self.tr("File System"), self.tr("Total Capacity"), self.tr("Available Space")])
         disk_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        # 设置表格字体
-        font = disk_table.font()
-        font.setPointSizeF(font.pointSizeF() * self.scaling_factor)
-        disk_table.setFont(font)
+        disk_table.setAlternatingRowColors(True)                    
+        disk_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)  
+        disk_table.verticalHeader().setVisible(False) 
+
+        disk_table.setStyleSheet(self.table_style)
+
         # 设置表头高度
         header = disk_table.horizontalHeader()
         header.setMinimumHeight(self.scaled(25))
@@ -947,6 +991,11 @@ class HardwareManager(QMainWindow):
         storage_table.setHorizontalHeaderLabels([self.tr("Device Name"), self.tr("Model"), self.tr("Driver Module")])
         storage_table.setRowCount(len(storage_devices))
         storage_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        storage_table.setAlternatingRowColors(True)                    
+        storage_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)  
+        storage_table.verticalHeader().setVisible(False) 
+
+        storage_table.setStyleSheet(self.table_style)
         
         for row, device in enumerate(storage_devices):
             storage_table.setRowHeight(row, self.scaled(25))
@@ -996,10 +1045,12 @@ class HardwareManager(QMainWindow):
         net_table.setColumnCount(4)
         net_table.setHorizontalHeaderLabels([self.tr("Interface Name"), self.tr("IP Address"), self.tr("MAC Address"), self.tr("Status")])
         net_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        # 设置表格字体
-        font = net_table.font()
-        font.setPointSizeF(font.pointSizeF() * self.scaling_factor)
-        net_table.setFont(font)
+        net_table.setAlternatingRowColors(True)                    
+        net_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)  
+        net_table.verticalHeader().setVisible(False) 
+
+        net_table.setStyleSheet(self.table_style)
+
         # 设置表头高度
         header = net_table.horizontalHeader()
         header.setMinimumHeight(self.scaled(25))
@@ -1051,6 +1102,11 @@ class HardwareManager(QMainWindow):
         net_driver_table.setHorizontalHeaderLabels([self.tr("Interface Name"), self.tr("Device Model"), self.tr("Driver Module")])
         net_driver_table.setRowCount(len(net_devices))
         net_driver_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        net_driver_table.setAlternatingRowColors(True)
+        net_driver_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        net_driver_table.verticalHeader().setVisible(False)
+
+        net_driver_table.setStyleSheet(self.table_style)
         
         for row, device in enumerate(net_devices):
             net_driver_table.setRowHeight(row, self.scaled(25))
@@ -1062,7 +1118,7 @@ class HardwareManager(QMainWindow):
         net_driver_layout.addWidget(net_driver_table)
         
         layout.addWidget(self.create_group_box(self.tr("Network Devices & Drivers"), net_driver_widget))
-        
+
         # 网络流量信息
         self.net_io_widget = QWidget()
         net_io_layout = QFormLayout()
@@ -1107,11 +1163,7 @@ class HardwareManager(QMainWindow):
         # 显卡信息
         gpu_info = self.get_gpu_info()
         gpu_label = QLabel(f"<b>{self.tr('Graphics Card:')}</b> {gpu_info}")
-        gpu_label.setStyleSheet(f"""
-            font-size: {self.scaled(12)}px;
-            color: palette(text);
-            background-color: transparent;
-        """)
+        # 这边我把样式表去掉，统一一下字体
         display_layout.addWidget(gpu_label)
         
         # VRAM信息
@@ -1121,18 +1173,8 @@ class HardwareManager(QMainWindow):
         
         total_vram_label = QLabel(f"<b>{self.tr('Total VRAM:')}</b> {self.format_size(total_vram)}")
         available_vram_label = QLabel(f"<b>{self.tr('Available VRAM:')}</b> {self.format_size(available_vram)}")
-        
-        total_vram_label.setStyleSheet(f"""
-            font-size: {self.scaled(12)}px;
-            color: palette(text);
-            background-color: transparent;
-        """)
-        available_vram_label.setStyleSheet(f"""
-            font-size: {self.scaled(12)}px;
-            color: palette(text);
-            background-color: transparent;
-        """)
-        
+        # 同上
+
         vram_layout.addWidget(total_vram_label)
         vram_layout.addWidget(available_vram_label)
         vram_layout.addStretch()
@@ -1152,44 +1194,7 @@ class HardwareManager(QMainWindow):
         ])
         
         # 设置表格样式 - 支持深色主题
-        self.screens_table.setStyleSheet(f"""
-            QTableWidget {{
-                gridline-color: palette(mid);
-                selection-background-color: palette(highlight);
-                selection-color: palette(highlighted-text);
-                background-color: palette(base);
-                color: palette(text);
-                font-size: {self.scaled(12)}px;
-                border: 1px solid palette(dark);
-                border-radius: {self.scaled(4)}px;
-            }}
-            QHeaderView::section {{
-                background-color: palette(window);
-                color: palette(text);
-                padding: {self.scaled(8)}px;
-                border: 1px solid palette(dark);
-                border-bottom: 2px solid palette(highlight);
-                font-weight: bold;
-                font-size: {self.scaled(12)}px;
-            }}
-            QTableWidget::item {{
-                padding: {self.scaled(6)}px;
-                border-bottom: 1px solid palette(alternate-base);
-                color: palette(text);
-                background-color: transparent;
-            }}
-            QTableWidget::item:selected {{
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }}
-            QTableWidget::item:alternate {{
-                background-color: palette(alternate-base);
-            }}
-            /* 确保在深色主题下有足够的对比度 */
-            QTableWidget::item:hover {{
-                background-color: palette(highlight).lighter(120);
-            }}
-        """)
+        self.screens_table.setStyleSheet(self.table_style)
         
         # 设置表格属性
         self.screens_table.setAlternatingRowColors(True)
@@ -1359,7 +1364,7 @@ class HardwareManager(QMainWindow):
         font.setPointSize(11) 
         font.setBold(True)
         label1.setFont(font)
-        label1.setStyleSheet("color: red;")        
+        label1.setStyleSheet("color: #E6004C;")        
         layout.addWidget(label1)
 
         label2 = QLabel(self.tr('Please select the driver you want to update:'))
@@ -1593,6 +1598,44 @@ class HardwareManager(QMainWindow):
             self.cache.set(cache_key, result, 3600)
             return result
     
+    def get_physical_disks(self):
+        """获取磁盘列表"""
+        disks = []
+        try:
+            result = subprocess.run(
+                ['lsblk', '-d', '-b', '-o', 'NAME,SIZE,TYPE,MODEL', '-n'],
+                capture_output=True, text=True, check=True
+            )
+            for line in result.stdout.strip().split('\n'):
+                if not line.strip():
+                    continue
+                parts = line.strip().split(maxsplit=3)
+                if len(parts) >= 3:
+                    name = parts[0]
+                    size = int(parts[1])         
+                    devtype = parts[2]
+                    model = parts[3] if len(parts) > 3 else ''
+                    if devtype == 'disk' and not name.startswith(('loop', 'ram')):
+                        disks.append({'name': name, 'size': size, 'model': model})
+        except (subprocess.CalledProcessError, FileNotFoundError, ValueError) as e:
+            print(f"Error running lsblk: {e}")
+        return disks
+
+    def update_physical_disks_label(self):
+        """更新物理磁盘列表显示标签"""
+        disks = self.get_physical_disks()
+        if not disks:
+            text = self.tr("No physical disks found (lsblk may not be available)")
+        else:
+            lines = []
+            for disk in disks:
+                size_str = self.format_size(disk['size'])  
+                if disk['model']:
+                    lines.append(f"{disk['name']} ({disk['model']}): {size_str}")
+                else:
+                    lines.append(f"{disk['name']}: {size_str}")
+            text = "\n".join(lines)
+        self.disk_list_label.setText(text)
 
     def get_gpu_info(self):
         """获取显卡信息"""
@@ -2426,9 +2469,14 @@ if __name__ == "__main__":
     
     app.installTranslator(translator)
 
-    # 设置全局样式
-    app.setStyle("Fusion")
+
     
+    palette = QPalette()
+
+    palette.setColor(QPalette.ColorRole.Highlight ,QColor("#F383A8"))
+
+    app.setPalette(palette)
+
     window = HardwareManager()
     window.show()
     
