@@ -19,7 +19,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess
 from PyQt6.QtGui import QColor, QIcon, QFont, QPalette, QPixmap
 
-version = "2.5.9"
+version = "2.6.0"
+
+uname = platform.uname()
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -493,7 +495,7 @@ class HardwareManager(QMainWindow):
             info = {}
             
             # 系统信息
-            uname = platform.uname()
+            # uname = platform.uname()
             info[self.tr('System Information')] = {
                 self.tr('System'): self.get_os_version(),
                 self.tr('Host Name'): uname.node,
@@ -723,7 +725,7 @@ class HardwareManager(QMainWindow):
         sys_layout.setVerticalSpacing(self.scaled(8))
         
         # 获取系统信息
-        uname = platform.uname()
+        #uname = platform.uname()
         
         sys_layout.addRow(self.tr("Operating System:"), QLabel(self.get_os_version()))
         sys_layout.addRow(self.tr("Hostname:"), QLabel(uname.node))
@@ -2002,47 +2004,42 @@ class HardwareManager(QMainWindow):
         """获取网络设备信息"""
         devices = []
         try:
-            # 获取网络接口列表
             net_if_addrs = psutil.net_if_addrs()
-            
-            # 通过lspci获取网络设备信息
-            result = subprocess.run(['lspci'], capture_output=True, text=True)
-            output = result.stdout
-            net_lines = [line for line in output.split('\n') if 'Ethernet controller' in line or 'Network controller' in line]
-            
-            # 处理每个网络接口
+        
             for iface in net_if_addrs:
                 device = {'interface': iface}
-                
-                # 查找匹配的PCI信息
-                for line in net_lines:
-                    iface_mac = None
-                    for addr in net_if_addrs[iface]:
-                        if hasattr(addr, 'family') and addr.family == psutil.AF_LINK:
-                            iface_mac = addr.address.lower().replace(':', '')
-                            break
-                            
-                    if iface_mac and iface_mac in line.lower():
-                        device['model'] = line.split(': ', 2)[-1]
+            
+                # 获取 MAC 地址（保留原逻辑）
+                for addr in net_if_addrs[iface]:
+                    if hasattr(addr, 'family') and addr.family == psutil.AF_LINK:
+                        device['mac'] = addr.address
                         break
-                else:
-                    device['model'] = self.tr("Unknown")
-                    
-                # 获取驱动信息
+            
+                # 获取驱动和型号
+                driver = self.tr("Unknown")
+                model = self.tr("Unknown")
                 try:
-                    result = subprocess.run(['ethtool', '-i', iface], capture_output=True, text=True)
-                    for line in result.stdout.split('\n'):
-                        if line.startswith('driver:'):
-                            device['driver'] = line.split(':')[1].strip()
-                            break
-                except:
-                    device['driver'] = self.tr("Unknown")
-                    
+                    result = subprocess.run(['ethtool', '-i', iface], capture_output=True, text=True, check=False)
+                    if result.returncode == 0:
+                        for line in result.stdout.splitlines():
+                            if line.startswith('driver:'):
+                                driver = line.split(':', 1)[1].strip()
+                            elif line.startswith('bus-info:'):
+                                bus_info = line.split(':', 1)[1].strip()
+                                # 通过 PCI 地址查询型号
+                                lspci = subprocess.run(['lspci', '-s', bus_info], capture_output=True, text=True, check=False)
+                                if lspci.returncode == 0 and lspci.stdout.strip():
+                                    model = lspci.stdout.split(':', 1)[1].strip()
+                except (subprocess.SubprocessError, FileNotFoundError):
+                    pass
+            
+                device['driver'] = driver
+                device['model'] = model
                 devices.append(device)
             
         except Exception as e:
             print(self.tr("Failed to get network device information: {}").format(e))
-            
+    
         return devices
     
     def get_display_driver_info(self):
@@ -2081,10 +2078,15 @@ class HardwareManager(QMainWindow):
                                 
                                 # 获取驱动版本
                                 try:
-                                    result = subprocess.run(['modinfo ' + driver_name + ' | grep version'], 
-                                                           shell=True, capture_output=True, text=True)
-                                    if result.stdout:
-                                        version = result.stdout.split(': ')[1].strip()
+                                    if drivers.get('OpenGL Vendor') == 'NVIDIA Corporation':
+                                        result = subprocess.run(['modinfo ' + driver_name + ' | grep version'], 
+                                                            shell=True, capture_output=True, text=True)
+                                        if result.stdout:
+                                            version = result.stdout.split(': ')[1].strip()
+                                            drivers[self.tr('Graphics Card {} Driver Version').format(i+1)] = version
+                                    else:
+                                        #uname = platform.uname()
+                                        version = uname.release
                                         drivers[self.tr('Graphics Card {} Driver Version').format(i+1)] = version
                                 except:
                                     pass
@@ -2270,7 +2272,8 @@ class UpdateChecker(QThread):
         print("All upgradable packages:", packages)
         # 3. 过滤出驱动/内核相关的包
         keywords = ['linux', 'nvidia', 'firmware', 'microcode', 'bluez']
-        driver_pkgs = [p for p in packages if any(k in p for k in keywords)]
+        exclude_pkgs = ['linuxqq']
+        driver_pkgs = [p for p in packages if any(k in p for k in keywords) and not any(ex in p for ex in exclude_pkgs)]
         print("Filtered driver packages:", driver_pkgs)
         self.finished.emit(driver_pkgs)
 

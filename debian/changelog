@@ -7,11 +7,14 @@ gxde-hardware-viewer (2.5.9) UNRELEASED; urgency=medium
   * 修改系统信息页面显示硬盘容量功能，修改为显示硬盘+容量
   * 优化界面UI
   * 修改程序使用的Qt主题
+  * 优化获取显卡驱动功能
+  * 修复无法获取网卡型号的问题
+  * 优化驱动更新功能，避免混入一下无关的包，如“linuxqq”
 
   [ gfdgd_xi ]
   * 新增多显示器信息显示
 
- -- zeqi <a202128502@163.com>  Sun, 15 Mar 2026 20:35:36 +0800
+ -- zeqi <a202128502@163.com>  Fri, 3 Apr 2026 21:51:31 +0800
 
 gxde-hardware-viewer (2.5.6-1) UNRELEASED; urgency=medium
 
