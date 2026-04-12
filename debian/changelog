@@ -1,4 +1,4 @@
-gxde-hardware-viewer (2.6.0) UNRELEASED; urgency=medium
+gxde-hardware-viewer (2.6.1) UNRELEASED; urgency=medium
 
   [ zeqi ]
   * 显示页新增显存大小和剩余显存
@@ -7,14 +7,12 @@ gxde-hardware-viewer (2.6.0) UNRELEASED; urgency=medium
   * 修改系统信息页面显示硬盘容量功能，修改为显示硬盘+容量
   * 优化界面UI
   * 修改程序使用的Qt主题
-  * 优化获取显卡驱动功能
-  * 修复无法获取网卡型号的问题
-  * 优化驱动更新功能，避免混入一下无关的包，如“linuxqq”
+  * 新增自定义背景功能
 
   [ gfdgd_xi ]
   * 新增多显示器信息显示
 
- -- gfdgd_xi <3025613752@qq.com>  Sat, 04 Apr 2026 20:56:06 +0800
+ -- zeqi <a202128502@163.com>  Sun, 12 Apr 2026 20:16:55 +0800
 
 gxde-hardware-viewer (2.5.6-1) UNRELEASED; urgency=medium
 

@@ -13,13 +13,13 @@ import time
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
-                            QLabel, QGroupBox, QFormLayout, QTextEdit,
+                            QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess
-from PyQt6.QtGui import QColor, QIcon, QFont, QPalette, QPixmap
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings
+from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap
 
-version = "2.6.0"
+version = "2.6.1"
 
 uname = platform.uname()
 
@@ -185,6 +185,84 @@ class CacheManager:
         else:
             self.cache.clear()
 
+def get_gxde_theme():
+    """获取系统主题"""
+    try:
+        result = subprocess.run(
+            ['gsettings', 'get', 'com.deepin.dde.appearance', 'gtk-theme'],
+            capture_output=True, text=True, timeout=2
+        )
+        if result.returncode == 0:
+            theme = result.stdout.strip().strip("'").strip('"')
+            if 'dark' in theme.lower():
+                return 'dark'
+            else:
+                return 'light'
+    except Exception as e:
+        print(f"Failed to get GXDE theme: {e}")
+    return 'light'
+
+class CentralWidget(QWidget):
+    """支持背景图片和半透明遮罩的中央部件"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.bg_image_path = ""
+        self.overlay_enabled = False
+
+        self.setObjectName("centralWidget")
+        self.cached_scaled_pixmap = None
+        self.cached_size = None
+
+        self.current_theme = get_gxde_theme()
+        self.update_overlay_color()
+
+    def set_background_image(self, path):
+        """设置背景图片路径，传入空字符串表示清除背景"""
+        self.bg_image_path = path
+        self.overlay_enabled = bool(path and os.path.exists(path))
+        self.cached_scaled_pixmap = None  
+        self.cached_size = None
+        self.update()
+
+    def update_overlay_color(self):
+        """根据当前主题设置遮罩颜色"""
+        if self.current_theme == 'dark':
+            self.overlay_color = QColor(0, 0, 0, 80)     
+        else:
+            self.overlay_color = QColor(255, 255, 255, 80)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        
+        if self.bg_image_path and os.path.exists(self.bg_image_path):
+            # 获取当前控件的逻辑尺寸
+            target_size = self.size()
+            
+            # 检查是否需要重新缩放
+            if self.cached_scaled_pixmap is None or self.cached_size != target_size:
+                pixmap = QPixmap(self.bg_image_path)
+                if not pixmap.isNull():
+                    # 获取设备像素比
+                    dpr = self.devicePixelRatioF()
+                    # 按物理像素尺寸缩放，避免模糊
+                    physical_size = target_size * dpr
+                    scaled = pixmap.scaled(
+                        physical_size,
+                        Qt.AspectRatioMode.IgnoreAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    scaled.setDevicePixelRatio(dpr)
+                    self.cached_scaled_pixmap = scaled
+                    self.cached_size = target_size
+            
+            if self.cached_scaled_pixmap is not None:
+                painter.drawPixmap(0, 0, self.cached_scaled_pixmap)
+        
+        # 绘制半透明遮罩层
+        if self.overlay_enabled:
+            painter.fillRect(self.rect(), self.overlay_color)
+
 class HardwareManager(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -247,6 +325,11 @@ class HardwareManager(QMainWindow):
         self.monitor_timer.timeout.connect(self.update_hardware_info)
         self.monitor_timer.start()
 
+        settings = QSettings("GXDE", "HardwareViewer")
+        saved_path = settings.value("background/image_path", "")
+        if saved_path:
+            self.apply_background_image(saved_path)
+
     def init_scaling_factor(self):
         """初始化缩放因子，用于适配不同分辨率"""
         self.scaling_factor = 1.0
@@ -270,7 +353,7 @@ class HardwareManager(QMainWindow):
         self.resize(self.scaled(900), self.scaled(600))
     
         # 创建中心部件
-        central_widget = QWidget()
+        central_widget = CentralWidget()
         self.setCentralWidget(central_widget)
     
         # 主布局
@@ -355,6 +438,10 @@ class HardwareManager(QMainWindow):
         self.menu = QMenu()
         export_action = self.menu.addAction(self.tr("Export all information to desktop"))
         export_action.triggered.connect(self.export_all_info)
+        background_action = self.menu.addAction(self.tr("Set Background Image"))
+        background_action.triggered.connect(self.choose_background_image)
+        remove_background_action = self.menu.addAction(self.tr("Remove Background"))
+        remove_background_action.triggered.connect(self.remove_background_image)
         about_action = self.menu.addAction(self.tr("About"))
         about_action.triggered.connect(self.show_about)
         self.gxde_title_bar.menu_button.setMenu(self.menu)
@@ -609,6 +696,64 @@ class HardwareManager(QMainWindow):
             
         except Exception as e:
             QMessageBox.critical(self, self.tr("Export Failed"), self.tr("An error occurred while exporting hardware information:\n{}").format(str(e)))
+
+    def choose_background_image(self):
+        """弹出文管对话框选择背景图片"""
+
+        settings = QSettings("GXDE", "HardwareViewer")
+        last_dir = settings.value("background/last_dir", os.path.expanduser("~"))
+    
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Select Background Image"),
+            last_dir,
+            self.tr("Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)")
+        )
+    
+        if file_path:
+            # 保存目录
+            settings.setValue("background/last_dir", os.path.dirname(file_path))
+            # 保存图片路径
+            settings.setValue("background/image_path", file_path)
+            # 应用背景
+            self.apply_background_image(file_path)
+
+    def apply_background_image(self, path):
+        """设置背景图片并保存设置"""
+        if not path or not os.path.exists(path):
+            return
+        self.centralWidget().set_background_image(path)
+
+        self.sidebar.setStyleSheet(f"""
+            QListWidget {{
+                padding-top: {self.scaled(10)}px;
+                border-right: none;
+                border-top: none;
+            }}
+            QListWidgetItem {{
+                height: {self.scaled(36)}px;
+                padding-left: {self.scaled(15)}px;
+                font-size: {self.scaled(14)}px;
+            }}
+            QListWidget::item:selected {{
+                color: #E6004C;
+                selection-background-color: #F380A6;
+                border-left: 3px solid #E6004C;
+            }}
+            QListWidget::item:hover:!selected {{
+                color: grey;
+                border-left: 3px solid grey;
+            }}
+        """)
+
+        self.sidebar.viewport().setStyleSheet("background-color: transparent;")
+
+    def remove_background_image(self):
+        """移除背景图片"""
+        self.centralWidget().set_background_image("")
+        # 清除保存的设置
+        settings = QSettings("GXDE", "HardwareViewer")
+        settings.remove("background/image_path")
     
     def show_about(self):
         dialog = AboutDialog(self)
