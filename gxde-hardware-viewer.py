@@ -227,9 +227,9 @@ class CentralWidget(QWidget):
     def update_overlay_color(self):
         """根据当前主题设置遮罩颜色"""
         if self.current_theme == 'dark':
-            self.overlay_color = QColor(0, 0, 0, 100)     
+            self.overlay_color = QColor(0, 0, 0, 125)     
         else:
-            self.overlay_color = QColor(255, 255, 255, 100)
+            self.overlay_color = QColor(255, 255, 255, 125)
 
     def paintEvent(self, event):
         super().paintEvent(event)
