@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings
 from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap
 
-version = "2.6.1"
+version = "2.6.1-1"
 
 uname = platform.uname()
 
@@ -227,9 +227,9 @@ class CentralWidget(QWidget):
     def update_overlay_color(self):
         """根据当前主题设置遮罩颜色"""
         if self.current_theme == 'dark':
-            self.overlay_color = QColor(0, 0, 0, 80)     
+            self.overlay_color = QColor(0, 0, 0, 100)     
         else:
-            self.overlay_color = QColor(255, 255, 255, 80)
+            self.overlay_color = QColor(255, 255, 255, 100)
 
     def paintEvent(self, event):
         super().paintEvent(event)
