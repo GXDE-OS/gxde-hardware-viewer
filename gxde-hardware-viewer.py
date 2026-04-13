@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings
 from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap
 
-version = "2.6.1-1"
+version = "2.6.1-2"
 
 uname = platform.uname()
 
@@ -238,18 +238,17 @@ class CentralWidget(QWidget):
         if self.bg_image_path and os.path.exists(self.bg_image_path):
             # 获取当前控件的逻辑尺寸
             target_size = self.size()
-            
+            # 获取设备像素比
+            dpr = self.devicePixelRatioF()
             # 检查是否需要重新缩放
             if self.cached_scaled_pixmap is None or self.cached_size != target_size:
                 pixmap = QPixmap(self.bg_image_path)
                 if not pixmap.isNull():
-                    # 获取设备像素比
-                    dpr = self.devicePixelRatioF()
                     # 按物理像素尺寸缩放，避免模糊
                     physical_size = target_size * dpr
                     scaled = pixmap.scaled(
                         physical_size,
-                        Qt.AspectRatioMode.IgnoreAspectRatio,
+                        Qt.AspectRatioMode.KeepAspectRatioByExpanding, # 改为保持比例并填满
                         Qt.TransformationMode.SmoothTransformation
                     )
                     scaled.setDevicePixelRatio(dpr)
@@ -257,8 +256,14 @@ class CentralWidget(QWidget):
                     self.cached_size = target_size
             
             if self.cached_scaled_pixmap is not None:
-                painter.drawPixmap(0, 0, self.cached_scaled_pixmap)
-        
+                # 计算居中偏移量，使图片中心与控件中心对齐
+                pixmap_size = self.cached_scaled_pixmap.size()
+                pixmap_width = pixmap_size.width()
+                pixmap_height = pixmap_size.height()
+                x = (target_size.width() * dpr - pixmap_width) / 2
+                y = (target_size.height() * dpr - pixmap_height) / 2
+                painter.drawPixmap(int(x), int(y), self.cached_scaled_pixmap)
+
         # 绘制半透明遮罩层
         if self.overlay_enabled:
             painter.fillRect(self.rect(), self.overlay_color)

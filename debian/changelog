@@ -1,4 +1,4 @@
-gxde-hardware-viewer (2.6.1-1) UNRELEASED; urgency=medium
+gxde-hardware-viewer (2.6.1-2) UNRELEASED; urgency=medium
 
   [ zeqi ]
   * 显示页新增显存大小和剩余显存
