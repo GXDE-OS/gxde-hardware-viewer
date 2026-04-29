@@ -16,12 +16,35 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QScrollArea)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QPoint
-from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImage, QFontMetrics
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent
+from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImage, QFontMetrics, QPainterPath, QRegion
+
+import dbus
 
 version = "2.6.1-2"
 
 uname = platform.uname()
+
+class SettingsUtils():
+    @staticmethod
+    # 从GXDE设置获取窗口圆角设置；若获取失败或非GXDE则默认返回8
+    def get_window_radius() -> int:
+        try:
+            bus = dbus.SessionBus()
+            obj = bus.get_object(
+                "com.gxde.daemon.personalization",
+                "/com/gxde/daemon/personalization"
+            )
+            interface = dbus.Interface(obj, dbus_interface="com.gxde.daemon.personalization")
+            resultGen = int(interface.Radius())
+            print(f"GetWindowRadius: Captured window radius: {resultGen}.")
+            return resultGen
+        
+        except Exception as e:
+            print(f"D-Bus service: Failed to capture window radius: {e}")
+            print(f"GetWindowRadius: As a result, 8 is returned as radius.")
+            return 8
+
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -174,7 +197,7 @@ class GXDETitleBar(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
+
         # 处理背景色
         if self.is_dark_mode():
             bgColorGen = self.DarkBg
@@ -183,7 +206,22 @@ class GXDETitleBar(QWidget):
             bgColorGen = self.lightBg
             borderColorGen = self.darkBorder
 
-        painter.fillRect(self.rect(), bgColorGen)
+        # 处理窗口圆角
+        radius = SettingsUtils().get_window_radius()
+        rect = QRectF(self.rect())
+        path = QPainterPath()
+        if radius > 0:
+            path.moveTo(rect.left(), rect.bottom())
+            path.lineTo(rect.left(), rect.top() + radius)
+            path.quadTo(rect.left(), rect.top(), rect.left() + radius, rect.top())
+            path.lineTo(rect.right() - radius, rect.top())
+            path.quadTo(rect.right(), rect.top(), rect.right(), rect.top() + radius)
+            path.lineTo(rect.right(), rect.bottom())
+            path.closeSubpath()
+        else:
+            path.addRect(rect)
+
+        painter.fillPath(path, bgColorGen)
 
         # 处理衬线
         painter.fillRect(0, self.height() - 1, self.width(), 1, borderColorGen)
@@ -266,9 +304,23 @@ class CentralWidget(QWidget):
             self.overlay_color = QColor(255, 255, 255, 125)
 
     def paintEvent(self, event):
-        super().paintEvent(event)
         painter = QPainter(self)
-        
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # 用窗口圆角裁剪绘制区域，实现抗锯齿圆角
+        win = self.window()
+        radius = win.corner_radius() if hasattr(win, 'corner_radius') else 0
+        rect = QRectF(self.rect())
+        path = QPainterPath()
+        if radius > 0:
+            path.addRoundedRect(rect, radius, radius)
+        else:
+            path.addRect(rect)
+        painter.setClipPath(path)
+
+        # 主窗口已设置 WA_TranslucentBackground，需要自行填充背景色
+        painter.fillPath(path, self.palette().color(QPalette.ColorRole.Window))
+
         if self.bg_image_path and os.path.exists(self.bg_image_path):
             # 获取当前控件的逻辑尺寸
             target_size = self.size()
@@ -288,7 +340,7 @@ class CentralWidget(QWidget):
                     scaled.setDevicePixelRatio(dpr)
                     self.cached_scaled_pixmap = scaled
                     self.cached_size = target_size
-            
+
             if self.cached_scaled_pixmap is not None:
                 # 计算居中偏移量，使图片中心与控件中心对齐
                 pixmap_size = self.cached_scaled_pixmap.size()
@@ -300,7 +352,7 @@ class CentralWidget(QWidget):
 
         # 绘制半透明遮罩层
         if self.overlay_enabled:
-            painter.fillRect(self.rect(), self.overlay_color)
+            painter.fillPath(path, self.overlay_color)
 
 # SideBarItem类，移植自MarcusPy827/Curly
 class SideBarItem(QWidget):
@@ -456,14 +508,33 @@ class SideBar(QWidget):
     # Mod: SideBar加入paintEvent重载以支持在自定义背景下实现半透明侧栏
     def paintEvent(self, event):
         painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 128
+
+        # 处理窗口圆角
+        radius = SettingsUtils().get_window_radius()
+        rect = QRectF(self.rect())
+        path = QPainterPath()
+        if radius > 0:
+            path.moveTo(rect.left(), rect.top())
+            path.lineTo(rect.right(), rect.top())
+            path.lineTo(rect.right(), rect.bottom())
+            path.lineTo(rect.left() + radius, rect.bottom())
+            path.quadTo(rect.left(), rect.bottom(), rect.left(), rect.bottom() - radius)
+            path.closeSubpath()
+        else:
+            path.addRect(rect)
+
         if self._bg_active:
+            painter.save()
+            painter.setClipPath(path)
             _paint_central_bg(self, painter)
             overlay = QColor(37, 37, 37, 102) if is_dark else QColor(249, 249, 250, 102)
-            painter.fillRect(self.rect(), overlay)
+            painter.fillPath(path, overlay)
+            painter.restore()
         else:
             color = QColor("#222222") if is_dark else QColor("#FDFDFD")
-            painter.fillRect(self.rect(), color)
+            painter.fillPath(path, color)
         super().paintEvent(event)
 
     # Mod: 启用/关闭窗口背景模式，刷新自身和所有子Item
@@ -588,9 +659,27 @@ class HardwareManager(QMainWindow):
     def scaled(self, value):
         """根据缩放因子缩放数值"""
         return int(value * self.scaling_factor)
-        
+
+    def corner_radius(self):
+        """读取GXDE设置中的窗口圆角半径，最大化时则返回0"""
+        if self.isMaximized() or self.isFullScreen():
+            return 0
+        return SettingsUtils().get_window_radius()
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.WindowStateChange:
+            # 处理圆角
+            self.update()
+            for w in (getattr(self, 'gxde_title_bar', None),
+                      getattr(self, 'sidebar', None),
+                      self.centralWidget()):
+                if w is not None:
+                    w.update()
+        super().changeEvent(event)
+
     def initUI(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.setWindowTitle(self.tr("GXDE Hardware Manager"))
         self.resize(self.scaled(900), self.scaled(600))
