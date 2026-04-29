@@ -201,10 +201,10 @@ class GXDETitleBar(QWidget):
         # 处理背景色
         if self.is_dark_mode():
             bgColorGen = self.DarkBg
-            borderColorGen = self.lightBorder
+            borderColorGen = self.darkBorder
         else:
             bgColorGen = self.lightBg
-            borderColorGen = self.darkBorder
+            borderColorGen = self.lightBorder
 
         # 处理窗口圆角
         radius = SettingsUtils().get_window_radius()
