@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QScrollArea)
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent
-from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImage, QFontMetrics, QPainterPath, QRegion
+from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImage, QFontMetrics, QPainterPath, QRegion, QPen
 
 import dbus
 
@@ -354,6 +354,36 @@ class CentralWidget(QWidget):
         if self.overlay_enabled:
             painter.fillPath(path, self.overlay_color)
 
+
+# Mod: 顶层透明层，负责窗体衬线
+class WindowBorderOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+    def paintEvent(self, event):
+        win = self.window()
+        if hasattr(win, 'isMaximized') and (win.isMaximized() or win.isFullScreen()):
+            return
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        radius = win.corner_radius() if hasattr(win, 'corner_radius') else 0
+        isDark = self.palette().color(QPalette.ColorRole.Window).lightness() < 128
+        borderColor = QColor(255, 255, 255, 50) if isDark else QColor(0, 0, 0, 25)
+        borderRect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        borderPath = QPainterPath()
+        if radius > 0:
+            innerRadius = max(radius - 0.5, 0.0)
+            borderPath.addRoundedRect(borderRect, innerRadius, innerRadius)
+        else:
+            borderPath.addRect(borderRect)
+        painter.setPen(QPen(borderColor, 1))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawPath(borderPath)
+
+
 # SideBarItem类，移植自MarcusPy827/Curly
 class SideBarItem(QWidget):
     itemClicked = pyqtSignal(int)
@@ -677,10 +707,20 @@ class HardwareManager(QMainWindow):
             self.update()
             for w in (getattr(self, 'gxde_title_bar', None),
                       getattr(self, 'sidebar', None),
+                      getattr(self, 'border_overlay', None),
                       self.centralWidget()):
                 if w is not None:
                     w.update()
         super().changeEvent(event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # Mod: 更新顶层透明层尺寸
+        overlay = getattr(self, 'border_overlay', None)
+        cw = self.centralWidget()
+        if overlay is not None and cw is not None:
+            overlay.setGeometry(cw.rect())
+            overlay.raise_()
 
     def initUI(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
@@ -768,6 +808,12 @@ class HardwareManager(QMainWindow):
     
         # 12. 设置文本选择功能
         self.setup_text_selection()
+
+        # Mod: 顶层透明层，负责窗体衬线，包住整个窗口
+        self.border_overlay = WindowBorderOverlay(central_widget)
+        self.border_overlay.setGeometry(central_widget.rect())
+        self.border_overlay.raise_()
+        self.border_overlay.show()
 
     def setup_text_selection(self):
         """设置文本选中复制功能"""
