@@ -535,6 +535,11 @@ class SideBar(QWidget):
         else:
             color = QColor("#222222") if is_dark else QColor("#FDFDFD")
             painter.fillPath(path, color)
+
+        # 处理衬线
+        borderColor = QColor(255, 255, 255, 50) if is_dark else QColor(0, 0, 0, 25)
+        painter.fillRect(self.width() - 1, 0, 1, self.height(), borderColor)
+
         super().paintEvent(event)
 
     # Mod: 启用/关闭窗口背景模式，刷新自身和所有子Item
