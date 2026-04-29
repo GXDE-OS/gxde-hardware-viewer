@@ -15,9 +15,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
-                            QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings
-from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap
+                            QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QScrollArea)
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QPoint
+from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImage, QFontMetrics
 
 version = "2.6.1-2"
 
@@ -41,6 +41,16 @@ class GXDETitleBar(QWidget):
         # 1. 设置标题栏布局
         self.layout.setContentsMargins(self.scaled(12), self.scaled(8), self.scaled(12), self.scaled(8))
         self.layout.setSpacing(self.scaled(15))
+
+        # 1.1 设定标题栏颜色
+        self.lightBg = QColor("#FBFBFB")
+        self.DarkBg = QColor("#050505")
+        self.lightBorder = QColor(0, 0, 0, 25)
+        self.darkBorder = QColor(255, 255, 255, 50)
+
+
+        # 1.2 标题栏高度对齐文件管理器
+        self.setFixedHeight(self.scaled(40))
         
         # 2. 左侧：窗口标题标签
         app_icon = QIcon.fromTheme("utilities-system-monitor")
@@ -153,6 +163,30 @@ class GXDETitleBar(QWidget):
                 event.accept()
                 return
         super().mousePressEvent(event)
+
+    # 6. 重载绘制函数
+    #    模仿DTK2.0时代的标题栏
+    def is_dark_mode(self) -> bool:
+        # 需要Qt 6.5+
+        scheme = QApplication.styleHints().colorScheme()
+        return scheme == Qt.ColorScheme.Dark
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # 处理背景色
+        if self.is_dark_mode():
+            bgColorGen = self.DarkBg
+            borderColorGen = self.lightBorder
+        else:
+            bgColorGen = self.lightBg
+            borderColorGen = self.darkBorder
+
+        painter.fillRect(self.rect(), bgColorGen)
+
+        # 处理衬线
+        painter.fillRect(0, self.height() - 1, self.width(), 1, borderColorGen)
 
 class CacheManager:
     """缓存管理器"""
@@ -268,6 +302,210 @@ class CentralWidget(QWidget):
         if self.overlay_enabled:
             painter.fillRect(self.rect(), self.overlay_color)
 
+# SideBarItem类，移植自MarcusPy827/Curly
+class SideBarItem(QWidget):
+    itemClicked = pyqtSignal(int)
+
+    def __init__(self, icon_name, text, index, width_override=-1, parent=None):
+        super().__init__(parent)
+        self._index = index
+        self._text = text
+        self._icon_name = icon_name
+        self._width_override = width_override if width_override > 0 else -1
+        self._is_checked = False
+        self._is_hovered = False
+
+        # Mod: 窗口自定义背景启用状态
+        self._bg_active = False
+
+        self.setFixedHeight(30)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover)
+
+    def setChecked(self, is_checked):
+        self._is_checked = is_checked
+        self.update()
+
+    # Mod: 通过SideBar的信号驱动，告知是否启用自定义背景图
+    def setBackgroundActive(self, active):
+        if self._bg_active == bool(active):
+            return
+        self._bg_active = bool(active)
+        self.update()
+
+    def getIndex(self):
+        return self._index
+
+    def setText(self, text):
+        self._text = text
+        self.update()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.itemClicked.emit(self._index)
+        super().mousePressEvent(event)
+
+    def enterEvent(self, event):
+        self._is_hovered = True
+        self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._is_hovered = False
+        self.update()
+        super().leaveEvent(event)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        item_padding = 13
+        icon_size = 16
+        icon_text_gap = 8
+        check_mark_border = 3
+
+        is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 100
+
+        if self._is_checked:
+            bg_color = QColor(44, 167, 248, 80) if is_dark else QColor(44, 167, 248, 60)
+            text_color = QColor(96, 190, 255) if is_dark else QColor(44, 167, 248)
+            painter.setFont(QFont("Sans", 9, QFont.Weight.Bold))
+        elif self._is_hovered:
+            bg_color = QColor(255, 255, 255, 30) if is_dark else QColor(0, 0, 0, 20)
+            text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
+            painter.setFont(QFont("Sans", 9))
+        else:
+            # Mod: 背景图片启用时，未选中时Item底色交由SideBar负责，不再由Item自行负责
+            bg_color = QColor(0, 0, 0, 0)
+            text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
+            painter.setFont(QFont("Sans", 9))
+
+        if bg_color.alpha() > 0:
+            painter.fillRect(self.rect(), bg_color)
+
+        icon_top = (self.height() - icon_size) // 2
+        icon_rect = QRect(item_padding, icon_top, icon_size, icon_size)
+        icon = QIcon.fromTheme(self._icon_name)
+        if not icon.isNull():
+            pixmap = icon.pixmap(icon_size, icon_size)
+            if self._is_checked:
+                img = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
+                ip = QPainter(img)
+                ip.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+                ip.fillRect(img.rect(), text_color)
+                ip.end()
+                pixmap = QPixmap.fromImage(img)
+            painter.drawPixmap(icon_rect, pixmap)
+
+        painter.setPen(text_color)
+        text_padding_left = item_padding + icon_size + icon_text_gap
+        text_rect = QRect(text_padding_left, 0,
+                          self.width() - text_padding_left - icon_text_gap,
+                          self.height())
+        fm = QFontMetrics(painter.font())
+        elided = fm.elidedText(self._text, Qt.TextElideMode.ElideRight, text_rect.width())
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
+
+        if self._is_checked:
+            x = (self._width_override if self._width_override > 0 else self.width()) - check_mark_border
+            painter.fillRect(x, 0, check_mark_border, self.height(), text_color)
+
+
+# Mod: 将 CentralWidget 的窗口背景图按当前 widget 在窗口中的位置绘制到 painter
+def _paint_central_bg(widget, painter):
+    window = widget.window()
+    if window is None:
+        return False
+    central = window.centralWidget() if hasattr(window, "centralWidget") else None
+    if not isinstance(central, CentralWidget):
+        return False
+    pixmap = getattr(central, "cached_scaled_pixmap", None)
+    if pixmap is None or pixmap.isNull():
+        return False
+    target_size = central.size()
+    dpr = central.devicePixelRatioF()
+    pix_w = pixmap.width()
+    pix_h = pixmap.height()
+    cx = (target_size.width() * dpr - pix_w) / 2
+    cy = (target_size.height() * dpr - pix_h) / 2
+    tl = widget.mapTo(central, QPoint(0, 0))
+    painter.drawPixmap(int(cx - tl.x()), int(cy - tl.y()), pixmap)
+    if getattr(central, "overlay_enabled", False):
+        painter.fillRect(widget.rect(), central.overlay_color)
+    return True
+
+
+# SideBar类，移植自MarcusPy827/Curly
+class SideBar(QWidget):
+    sideBarItemClicked = pyqtSignal(int)
+    # Mod: 通知Item窗体背景已被设置
+    backgroundActiveChanged = pyqtSignal(bool)
+
+    def __init__(self, item_width_override=-1, parent=None):
+        super().__init__(parent)
+
+        self._width_override = item_width_override if item_width_override > 0 else -1
+        self._item_list = []
+        self._bg_active = False  # Mod: 窗体背景启用状态
+
+        self._layout = QVBoxLayout(self)
+        self._layout.setSpacing(0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+    # Mod: SideBar加入paintEvent重载以支持在自定义背景下实现半透明侧栏
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 128
+        if self._bg_active:
+            _paint_central_bg(self, painter)
+            overlay = QColor(37, 37, 37, 102) if is_dark else QColor(249, 249, 250, 102)
+            painter.fillRect(self.rect(), overlay)
+        else:
+            color = QColor("#222222") if is_dark else QColor("#FDFDFD")
+            painter.fillRect(self.rect(), color)
+        super().paintEvent(event)
+
+    # Mod: 启用/关闭窗口背景模式，刷新自身和所有子Item
+    def setBackgroundActive(self, active):
+        active = bool(active)
+        if self._bg_active == active:
+            return
+        self._bg_active = active
+        self.update()
+        self.backgroundActiveChanged.emit(active)
+
+    def isBackgroundActive(self):
+        return self._bg_active
+
+    def addItem(self, icon_name, text, index):
+        item = SideBarItem(icon_name, text, index, self._width_override, self)
+        self._item_list.append(item)
+        self._layout.addWidget(item)
+        item.itemClicked.connect(lambda i, it=item: self._on_item_clicked(i, it))
+        # Mod：设置状态跟随
+        self.backgroundActiveChanged.connect(item.setBackgroundActive)
+        item.setBackgroundActive(self._bg_active)
+
+    def _on_item_clicked(self, index, item):
+        self.setCurrentItem(item)
+        self.sideBarItemClicked.emit(index)
+
+    def setCurrentItem(self, item):
+        for it in self._item_list:
+            it.setChecked(it is item)
+
+    def setCurrentIndex(self, index):
+        for it in self._item_list:
+            it.setChecked(it.getIndex() == index)
+
+    def item(self, index):
+        for it in self._item_list:
+            if it.getIndex() == index:
+                return it
+        return None
+
+
 class HardwareManager(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -378,31 +616,10 @@ class HardwareManager(QMainWindow):
         content_layout.setSpacing(0)
     
         # 3. 创建侧边栏
-        self.sidebar = QListWidget()
-        self.sidebar.setFixedWidth(self.scaled(180))
-        self.sidebar.setSpacing(self.scaled(2))
-        self.sidebar.setStyleSheet(f"""
-            QListWidget {{
-                padding-top: {self.scaled(10)}px;
-                border-right: none;
-                border-top: none;
-            }}
-            QListWidgetItem {{
-                height: {self.scaled(36)}px;
-                padding-left: {self.scaled(15)}px;
-                font-size: {self.scaled(14)}px;
-            }}
-            QListWidget::item:selected {{
-                color: #E6004C;
-                selection-background-color: #F380A6;
-                border-left: 3px solid #E6004C;
-            }}
-            QListWidget::item:hover:!selected {{
-                color: grey;
-                border-left: 3px solid grey;
-            }}
-        """)
-    
+        sidebar_width = self.scaled(200)
+        self.sidebar = SideBar(sidebar_width, self)
+        self.sidebar.setFixedWidth(sidebar_width)
+
         # 4. 添加侧边栏项目
         self.add_sidebar_item(self.tr("System"), "computer")
         self.add_sidebar_item(self.tr("CPU"), "cpu")
@@ -436,8 +653,9 @@ class HardwareManager(QMainWindow):
         main_layout.addWidget(content_widget, 1)
     
         # 9. 连接信号
-        self.sidebar.currentRowChanged.connect(self.stack.setCurrentIndex)
-        self.sidebar.setCurrentRow(0)
+        self.sidebar.sideBarItemClicked.connect(self.stack.setCurrentIndex)
+        self.sidebar.setCurrentIndex(0)
+        self.stack.setCurrentIndex(0)
     
         # 10. 设置菜单
         self.menu = QMenu()
@@ -729,33 +947,15 @@ class HardwareManager(QMainWindow):
             return
         self.centralWidget().set_background_image(path)
 
-        self.sidebar.setStyleSheet(f"""
-            QListWidget {{
-                padding-top: {self.scaled(10)}px;
-                border-right: none;
-                border-top: none;
-            }}
-            QListWidgetItem {{
-                height: {self.scaled(36)}px;
-                padding-left: {self.scaled(15)}px;
-                font-size: {self.scaled(14)}px;
-            }}
-            QListWidget::item:selected {{
-                color: #E6004C;
-                selection-background-color: #F380A6;
-                border-left: 3px solid #E6004C;
-            }}
-            QListWidget::item:hover:!selected {{
-                color: grey;
-                border-left: 3px solid grey;
-            }}
-        """)
-
-        self.sidebar.viewport().setStyleSheet("background-color: transparent;")
+        # Mod：发送信号通知SideBar背景变更
+        self.sidebar.setBackgroundActive(True)
 
     def remove_background_image(self):
         """移除背景图片"""
         self.centralWidget().set_background_image("")
+
+        # Mod：同步通知SideBar背景变更
+        self.sidebar.setBackgroundActive(False)
         # 清除保存的设置
         settings = QSettings("GXDE", "HardwareViewer")
         settings.remove("background/image_path")
@@ -801,11 +1001,8 @@ class HardwareManager(QMainWindow):
     
     def add_sidebar_item(self, text, icon_name):
         """添加侧边栏项目"""
-        item = QListWidgetItem(text)
-        # 图标大小自适应
-        icon = QIcon.fromTheme(icon_name, QIcon())
-        item.setIcon(icon)
-        self.sidebar.addItem(item)
+        index = len(self.sidebar._item_list)
+        self.sidebar.addItem(icon_name, text, index)
         
     def create_group_box(self, title, widget):
         """创建带标题的分组框"""
