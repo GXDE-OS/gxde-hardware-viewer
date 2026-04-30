@@ -579,6 +579,40 @@ class SideBarItem(QWidget):
         self.update()
         super().leaveEvent(event)
 
+    # Mod: 渲染内置图标，而不是走XDG Icon
+    def renderTintedIcon(self, size, color):
+        filename = f"{self._icon_name}.svg"
+        path = ""
+        for base in (
+            "/usr/share/gxde-hardware-viewer/icons",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons"),
+        ):
+            candidate = os.path.join(base, filename)
+            if os.path.exists(candidate):
+                path = candidate
+                break
+        if not path:
+            return None
+        try:
+            with open(path, "rb") as f:
+                data = f.read()
+        except OSError:
+            return None
+        data = data.replace(b"currentColor", color.name().encode("ascii"))
+        dpr = self.devicePixelRatioF()
+        physical = max(1, int(round(size * dpr)))
+        pixmap = QPixmap()
+        if not pixmap.loadFromData(data, "svg"):
+            return None
+        if pixmap.width() != physical or pixmap.height() != physical:
+            pixmap = pixmap.scaled(
+                physical, physical,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+        pixmap.setDevicePixelRatio(dpr)
+        return pixmap
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -609,16 +643,8 @@ class SideBarItem(QWidget):
 
         icon_top = (self.height() - icon_size) // 2
         icon_rect = QRect(item_padding, icon_top, icon_size, icon_size)
-        icon = QIcon.fromTheme(self._icon_name)
-        if not icon.isNull():
-            pixmap = icon.pixmap(icon_size, icon_size)
-            if self._is_checked:
-                img = pixmap.toImage().convertToFormat(QImage.Format.Format_ARGB32)
-                ip = QPainter(img)
-                ip.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
-                ip.fillRect(img.rect(), text_color)
-                ip.end()
-                pixmap = QPixmap.fromImage(img)
+        pixmap = self.renderTintedIcon(icon_size, text_color)
+        if pixmap is not None:
             painter.drawPixmap(icon_rect, pixmap)
 
         painter.setPen(text_color)
@@ -897,15 +923,15 @@ class HardwareManager(QMainWindow):
         self.sidebar.setFixedWidth(sidebar_width)
 
         # 4. 添加侧边栏项目
-        self.add_sidebar_item(self.tr("System"), "computer")
+        self.add_sidebar_item(self.tr("System"), "system_information")
         self.add_sidebar_item(self.tr("CPU"), "cpu")
-        self.add_sidebar_item(self.tr("Memory"), "memory")
-        self.add_sidebar_item(self.tr("Storage"), "disk-quota")
+        self.add_sidebar_item(self.tr("Memory"), "ram")
+        self.add_sidebar_item(self.tr("Storage"), "rom")
         self.add_sidebar_item(self.tr("Network"), "network")
         self.add_sidebar_item(self.tr("Display"), "display")
         self.add_sidebar_item(self.tr("Sound"), "sound")
-        self.add_sidebar_item(self.tr("Input Devices"), "dialog-input-devices")
-        self.add_sidebar_item(self.tr("Driver Update"), "system-upgrade")
+        self.add_sidebar_item(self.tr("Input Devices"), "input_device")
+        self.add_sidebar_item(self.tr("Driver Update"), "driver_update")
     
         # 5. 创建主内容区域
         self.stack = QStackedWidget()
