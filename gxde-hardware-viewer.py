@@ -15,10 +15,10 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
-                            QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QScrollArea)
-from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent
+                            QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QScrollArea, QToolButton)
+from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent, QSize
 from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImage, QFontMetrics, QPainterPath, QRegion, QPen
-
+from enum import Enum
 import dbus
 
 version = "2.6.1-2"
@@ -45,6 +45,171 @@ class SettingsUtils():
             print(f"GetWindowRadius: As a result, 8 is returned as radius.")
             return 8
 
+# 标题栏按钮类型
+class TitleBarBtnType(Enum):
+    MINIMIZE = 0
+    MAXIMIZE = 1
+    CLOSE = 2
+    MENU = 3
+
+# 标题栏按钮（最大化、最小化、关闭、菜单）
+class TitleBarBtns(QWidget):
+    _ICON_PREFIX = {
+        TitleBarBtnType.MINIMIZE: "minimize",
+        TitleBarBtnType.MAXIMIZE: "maximize",
+        TitleBarBtnType.CLOSE: "close",
+        TitleBarBtnType.MENU: "menu",
+    }
+
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None, btnType=TitleBarBtnType.CLOSE):
+        super().__init__(parent)
+        self.parent = parent
+        self.btnType = btnType
+        self._menu = None
+
+        # 初始化缩放因子
+        self.scaling_factor = parent.scaling_factor if hasattr(parent, 'scaling_factor') else 1.0
+
+        # 绘制局部
+        self.setFixedSize(self.scaled(40), self.scaled(40))
+        self.layoutGen = QHBoxLayout(self)
+        self.layoutGen.setContentsMargins(0, 0, 0, 0)
+        
+        self.btn = QToolButton(self)
+        self.btn.setFixedSize(self.scaled(30), self.scaled(30))
+        self.btn.setAutoRaise(True)
+        self.btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn.setStyleSheet("QToolButton { border: none; background: transparent; }")
+        self.layoutGen.addWidget(self.btn, 0, Qt.AlignmentFlag.AlignCenter)
+
+        # 疑似对于标题栏来说最大化按钮太大了
+        if self.btnType == TitleBarBtnType.MAXIMIZE:
+            self.btn.setIconSize(QSize(self.scaled(16), self.scaled(16)))
+        else:
+            self.btn.setIconSize(QSize(self.scaled(20), self.scaled(20)))
+
+        # 状态跟踪，用以切换 default / hover / pressed 图标
+        self._hovered = False
+        self._pressed = False
+        self.btn.installEventFilter(self)
+
+        self._refresh_icon()
+
+        # 系统主题切换时刷新图标
+        QApplication.styleHints().colorSchemeChanged.connect(self._refresh_icon)
+
+        # 行为绑定
+        self.btn.clicked.connect(self._on_clicked)
+
+    def scaled(self, value):
+        return int(value * self.scaling_factor)
+
+    def _is_dark(self) -> bool:
+        return QApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+
+    def _icon_path(self, state: str) -> str:
+        prefix = self._ICON_PREFIX[self.btnType]
+        theme = "dark" if self._is_dark() else "light"
+        suffix = f"_{state}_{theme}" if state else f"_{theme}"
+        filename = f"{prefix}{suffix}.svg"
+        for base in (
+            "/usr/share/gxde-hardware-viewer/icons",
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons"),
+        ):
+            path = os.path.join(base, filename)
+            if os.path.exists(path):
+                return path
+        return ""
+
+    def _refresh_icon(self):
+        if self._pressed:
+            state = "pressed"
+        elif self._hovered:
+            state = "hover"
+        else:
+            state = ""
+        path = self._icon_path(state)
+        if path:
+            self.btn.setIcon(QIcon(path))
+        self.update()
+
+    def paintEvent(self, event):
+        # 深色模式下保持透明背景
+        if self._is_dark():
+            return
+        if self._pressed:
+            bg = QColor("#EAEAED")
+        elif self._hovered:
+            bg = QColor("#EFEFF2")
+        else:
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # 关闭按钮位于标题栏右上角，需匹配窗口圆角
+        if self.btnType == TitleBarBtnType.CLOSE:
+            radius = SettingsUtils().get_window_radius()
+            rect = QRectF(self.rect())
+            path = QPainterPath()
+            if radius > 0:
+                path.moveTo(rect.left(), rect.top())
+                path.lineTo(rect.right() - radius, rect.top())
+                path.quadTo(rect.right(), rect.top(), rect.right(), rect.top() + radius)
+                path.lineTo(rect.right(), rect.bottom())
+                path.lineTo(rect.left(), rect.bottom())
+                path.closeSubpath()
+            else:
+                path.addRect(rect)
+            painter.fillPath(path, bg)
+        else:
+            painter.fillRect(self.rect(), bg)
+
+    def eventFilter(self, obj, event):
+        if obj is self.btn:
+            t = event.type()
+            if t == QEvent.Type.Enter:
+                self._hovered = True
+                self._refresh_icon()
+            elif t == QEvent.Type.Leave:
+                self._hovered = False
+                self._pressed = False
+                self._refresh_icon()
+            elif t == QEvent.Type.MouseButtonPress:
+                self._pressed = True
+                self._refresh_icon()
+            elif t == QEvent.Type.MouseButtonRelease:
+                self._pressed = False
+                self._refresh_icon()
+        return super().eventFilter(obj, event)
+
+    def setMenu(self, menu):
+        self._menu = menu
+
+    def menu(self):
+        return self._menu
+
+    def _on_clicked(self):
+        win = self.window()
+        if self.btnType == TitleBarBtnType.MINIMIZE:
+            win.showMinimized()
+        elif self.btnType == TitleBarBtnType.MAXIMIZE:
+            if win.isMaximized():
+                win.showNormal()
+            else:
+                win.showMaximized()
+            self._refresh_icon()
+        elif self.btnType == TitleBarBtnType.CLOSE:
+            win.close()
+        elif self.btnType == TitleBarBtnType.MENU:
+            if self._menu is not None:
+                pos = self.mapToGlobal(QPoint(0, self.height()))
+                self._menu.exec(pos)
+            self.clicked.emit()
+
+
 
 class GXDETitleBar(QWidget):
     def __init__(self, parent=None):
@@ -62,8 +227,12 @@ class GXDETitleBar(QWidget):
         self.layout.setSpacing(self.scaled(8))
 
         # 1. 设置标题栏布局
-        self.layout.setContentsMargins(self.scaled(12), self.scaled(8), self.scaled(12), self.scaled(8))
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(self.scaled(15))
+
+        self.titleBarInnerLayout = QHBoxLayout(self)
+        self.titleBarInnerLayout.setContentsMargins(self.scaled(12), self.scaled(8), self.scaled(12), self.scaled(8))
+        self.layout.addLayout(self.titleBarInnerLayout)
 
         # 1.1 设定标题栏颜色
         self.lightBg = QColor("#FBFBFB")
@@ -84,57 +253,26 @@ class GXDETitleBar(QWidget):
         self.title_icon_label.setPixmap(icon_pixmap)
         self.title_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.title_icon_label.setFixedSize(self.scaled(24), self.scaled(24))
-        self.layout.addWidget(self.title_icon_label)
-        self.layout.addStretch()
+        self.titleBarInnerLayout.addWidget(self.title_icon_label)
+        self.titleBarInnerLayout.addStretch()
         
         # 3. 右侧：菜单按钮
-        self.menu_button = QPushButton("☰")
-        self.menu_button.setFixedSize(self.scaled(24), self.scaled(24))
-        self.menu_button.setStyleSheet(f"""
-            QPushButton {{
-                border: none;
-                border-radius: {self.scaled(4)}px;
-                background-color: transparent;
-                font-size: {self.scaled(16)}px;
-            }}
-            QPushButton::menu-indicator {{
-                image: none;
-                width: 0px;
-            }}
-            QPushButton:hover {{
-                background-color: grey;
-            }}
-            QPushButton:pressed {{
-                color: white;
-                background-color: #F380A6
-            }}
-        """)
-        self.layout.addWidget(self.menu_button)
+        self.titleBarBtnLayout = QHBoxLayout()
+        self.titleBarBtnLayout.setContentsMargins(0, 0, 0, 0)
+        self.titleBarBtnLayout.setSpacing(0)
+
+        self.menu_button = TitleBarBtns(self, TitleBarBtnType.MENU)
+        self.titleBarBtnLayout.addWidget(self.menu_button)
         
         # 4. 右侧：窗口控制按钮
-        self.min_btn = self.create_gxde_control_btn("—")
-        self.max_btn = self.create_gxde_control_btn("□")
+        self.min_btn = TitleBarBtns(self, TitleBarBtnType.MINIMIZE)
+        self.max_btn = TitleBarBtns(self, TitleBarBtnType.MAXIMIZE)
+        self.close_btn = TitleBarBtns(self, TitleBarBtnType.CLOSE)
 
-        self.close_btn = self.create_gxde_control_btn("×")
-        # 关闭按钮样式
-        self.close_btn.setStyleSheet(f"""
-            QPushButton {{
-                border: none;
-                border-radius: {self.scaled(4)}px;
-                background-color: transparent;
-                font-size: {self.scaled(14)}px;
-            }}
-            QPushButton:hover {{
-                background-color: #E6004C;
-                color: white;
-            }}
-            QPushButton:pressed {{
-                background-color: #cc0000;
-            }}
-        """)
-        self.layout.addWidget(self.min_btn)
-        self.layout.addWidget(self.max_btn)
-        self.layout.addWidget(self.close_btn)
+        self.titleBarBtnLayout.addWidget(self.min_btn)
+        self.titleBarBtnLayout.addWidget(self.max_btn)
+        self.titleBarBtnLayout.addWidget(self.close_btn)
+        self.layout.addLayout(self.titleBarBtnLayout)
         
         # 5. 绑定窗口控制按钮事件
         self.min_btn.clicked.connect(self.parent.showMinimized)

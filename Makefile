@@ -13,4 +13,5 @@ install:
 	cp -rv gxde-hardware-viewer.py $(DESTDIR)/usr/bin/gxde-hardware-viewer
 	cp -rv gxde-hardware-viewer-helper.sh $(DESTDIR)/usr/bin/gxde-hardware-viewer-helper
 	cp -rv translations/*.qm $(DESTDIR)/usr/share/gxde-hardware-viewer/translations
+	cp -rv icons/*.svg $(DESTDIR)/usr/share/gxde-hardware-viewer/icons
 	cp -rv gxde-logo_new.png $(DESTDIR)/usr/share/gxde-hardware-viewer
