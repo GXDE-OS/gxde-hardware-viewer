@@ -456,8 +456,12 @@ class CentralWidget(QWidget):
             path.addRect(rect)
         painter.setClipPath(path)
 
-        # 主窗口已设置 WA_TranslucentBackground，需要自行填充背景色
-        painter.fillPath(path, self.palette().color(QPalette.ColorRole.Window))
+        # 填充背景色
+        if self.bg_image_path and os.path.exists(self.bg_image_path):
+            painter.fillPath(path, self.palette().color(QPalette.ColorRole.Window))
+        else:
+            is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 128
+            painter.fillPath(path, QColor("#202020") if is_dark else QColor("#FFFFFF"))
 
         if self.bg_image_path and os.path.exists(self.bg_image_path):
             # 获取当前控件的逻辑尺寸
