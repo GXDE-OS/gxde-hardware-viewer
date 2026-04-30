@@ -591,8 +591,8 @@ class SideBarItem(QWidget):
         is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 100
 
         if self._is_checked:
-            bg_color = QColor(44, 167, 248, 80) if is_dark else QColor(44, 167, 248, 60)
-            text_color = QColor(96, 190, 255) if is_dark else QColor(44, 167, 248)
+            bg_color = QColor(230, 0, 76, 80) if is_dark else QColor(230, 0, 76, 60)
+            text_color = QColor(230, 0, 76)
             painter.setFont(QFont("Sans", 9, QFont.Weight.Bold))
         elif self._is_hovered:
             bg_color = QColor(255, 255, 255, 30) if is_dark else QColor(0, 0, 0, 20)
