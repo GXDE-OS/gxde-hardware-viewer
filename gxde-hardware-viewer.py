@@ -279,6 +279,10 @@ class GXDETitleBar(QWidget):
         self.max_btn.clicked.connect(self.toggle_maximize)
         self.close_btn.clicked.connect(self.parent.close)
 
+        # 6. 允许在触屏上使用手指拖拽标题栏
+        self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
+        self._touch_drag_offset = None
+
     def scaled(self, value):
         """复用缩放逻辑"""
         return int(value * self.scaling_factor)
@@ -313,17 +317,59 @@ class GXDETitleBar(QWidget):
             self.parent.showMaximized()
             self.max_btn.setText("▢")
 
+    # 新的窗口移动实现
+    # 目的是为了支持触摸屏上通过手指移动窗口
+    def handleWindowMove(self):
+        window = self.parent.windowHandle()
+        if window is None:
+            return False
+
+        # 如果窗口处于最大化状态，先还原再移动
+        if self.parent.isMaximized():
+            self.parent.showNormal()
+        window.startSystemMove()
+        return True
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            window = self.parent.windowHandle()
-            if window is not None:
-                # 如果窗口处于最大化状态，先还原再移动
-                if self.parent.isMaximized():
-                    self.parent.showNormal()
-                window.startSystemMove()
+            if self.handleWindowMove():
                 event.accept()
                 return
         super().mousePressEvent(event)
+
+    def event(self, e):
+        # 注意到触屏下似乎无法正确驱动 startSystemMove
+        # 现在手动trace触摸点位置，通过move()更新坐标得了
+        et = e.type()
+        if et == QEvent.Type.TouchBegin:
+            pts = e.points()
+            if pts:
+                local_pos = pts[0].position().toPoint()
+                # 标题栏按钮不应该响应拖拽，不然点不动
+                if self.childAt(local_pos) is not None:
+                    return super().event(e)
+                if self.parent.isMaximized():
+                    self.parent.showNormal()
+
+                global_pos = pts[0].globalPosition().toPoint()
+                self._touch_drag_offset = global_pos - self.parent.frameGeometry().topLeft()
+                e.accept()
+                return True
+
+        elif et == QEvent.Type.TouchUpdate:
+            if self._touch_drag_offset is not None:
+                pts = e.points()
+                if pts:
+                    global_pos = pts[0].globalPosition().toPoint()
+                    self.parent.move(global_pos - self._touch_drag_offset)
+                e.accept()
+                return True
+        elif et in (QEvent.Type.TouchEnd, QEvent.Type.TouchCancel):
+            if self._touch_drag_offset is not None:
+                self._touch_drag_offset = None
+                e.accept()
+                return True
+        return super().event(e)
 
     # 6. 重载绘制函数
     #    模仿DTK2.0时代的标题栏
