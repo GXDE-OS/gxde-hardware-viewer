@@ -107,7 +107,7 @@ class TitleBarBtns(QWidget):
         return int(value * self.scaling_factor)
 
     def _is_dark(self) -> bool:
-        return QApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+        return self.palette().color(QPalette.ColorRole.Window).lightness() < 128
 
     def _icon_path(self, state: str) -> str:
         prefix = self._ICON_PREFIX[self.btnType]
@@ -328,9 +328,7 @@ class GXDETitleBar(QWidget):
     # 6. 重载绘制函数
     #    模仿DTK2.0时代的标题栏
     def is_dark_mode(self) -> bool:
-        # 需要Qt 6.5+
-        scheme = QApplication.styleHints().colorScheme()
-        return scheme == Qt.ColorScheme.Dark
+        return self.palette().color(QPalette.ColorRole.Window).lightness() < 128
 
     def paintEvent(self, event):
         painter = QPainter(self)
