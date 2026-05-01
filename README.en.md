@@ -23,9 +23,15 @@ GXDE Hardware Manager is a lightweight hardware information viewer specifically 
 
 - 8. Input Devices ⌨️🖱️: Keyboard, mouse, and other input device detection
 
-- 9. Multi-language Support 🌍: English and Chinese interface
+- 9. Driver Update ⬆️: Support for obtaining driver & kernel updates from system sources.
 
-- 10. Data Export 📤: Export all hardware information to JSON format on desktop
+- 10. Multi-language Support 🌍: English and Chinese interface
+
+- 11. Data Export 📤: Export all hardware information to JSON format on desktop
+
+- 12. Custom Background 🖼️: You can choose your favorite image as the background.
+
+- 13. Touchscreen Support 🖥️: Support for using the touchscreen as an input method.
 
  **Usage Instructions 📖** 
 
@@ -47,7 +53,11 @@ The application features a sidebar navigation with the following sections:
 
 - 8. Input Devices ⌨️🖱️: Keyboard, mouse, and other input devices
 
-- 9. Data Export 📤: Click the menu button (☰) in the top-right corner and select "Export all information to desktop" to save a comprehensive JSON file with all hardware information. 📄
+- 9. Driver Update ⬆️: Support for obtaining driver & kernel updates from system sources.
+
+- 10. Data Export 📤: Click the menu button (☰) in the top-right corner and select "Export all information to desktop" to save a comprehensive JSON file with all hardware information. 📄
+
+- 11. Custom Background 🖼️: Click the menu button (☰) in the top right corner, select "Set Background Wallpaper", then you can choose your favorite image as the background. If you no longer need it later, you can also select "Remove Background Wallpaper" to restore the default interface.
 
  **Contribution Guidelines 🤝** 
 
@@ -63,7 +73,7 @@ Thanks to all the open source software we've used 🎉
 
 Thanks to all users and contributors ❤️
 
-Special Thanks ❤️: @zeqi, @gfdgd xi, and @shenmo - without them, this software wouldn't exist!
+Special Thanks ❤️: @zeqi, @gfdgd xi, @shenmo and @CharOfString - without them, this software wouldn't exist!
 
  **Official Website 🌐** : [www.gxde.top](http://www.gxde.top)
 
