@@ -21,7 +21,7 @@ from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImag
 from enum import Enum
 import dbus
 
-version = "2.6.1-2"
+version = "2.6.2-3"
 
 uname = platform.uname()
 
