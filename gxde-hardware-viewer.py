@@ -21,7 +21,7 @@ from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImag
 from enum import Enum
 import dbus
 
-version = "2.6.2-3"
+version = "2.6.3"
 
 uname = platform.uname()
 
@@ -2316,7 +2316,7 @@ class HardwareManager(QMainWindow):
                     size = int(parts[1])         
                     devtype = parts[2]
                     model = parts[3] if len(parts) > 3 else ''
-                    if devtype == 'disk' and not name.startswith(('loop', 'ram')):
+                    if devtype == 'disk' and not name.startswith(('loop', 'ram', 'zram')):
                         disks.append({'name': name, 'size': size, 'model': model})
         except (subprocess.CalledProcessError, FileNotFoundError, ValueError) as e:
             print(f"Error running lsblk: {e}")
