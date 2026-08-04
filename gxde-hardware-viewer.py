@@ -245,7 +245,7 @@ class GXDETitleBar(QWidget):
         self.setFixedHeight(self.scaled(40))
         
         # 2. 左侧：窗口标题标签
-        app_icon = QIcon.fromTheme("utilities-system-monitor")
+        app_icon = QIcon("/usr/share/gxde-hardware-viewer/icons/gxde-hardware-viewer.svg")
         icon_size = self.scaled(24)
         icon_pixmap = app_icon.pixmap(icon_size, icon_size)
 
@@ -3073,7 +3073,7 @@ class AboutDialog(QDialog):
 
         # 图标
         icon_label = QLabel()
-        icon = QIcon.fromTheme("utilities-system-monitor")
+        icon = QIcon("/usr/share/gxde-hardware-viewer/icons/gxde-hardware-viewer.svg")
         icon_label.setPixmap(icon.pixmap(128, 128))
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(icon_label)
