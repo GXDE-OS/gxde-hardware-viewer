@@ -1,5 +1,5 @@
 ### GXDE硬件查看器
-![输入图片说明](hardware-manager-icon.png)
+![输入图片说明](gxde-hardware-manager.png)
 
  **概述 🔍** 
 
