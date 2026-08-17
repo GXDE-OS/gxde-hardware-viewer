@@ -23,6 +23,8 @@ Depends:
  policykit-1 | pkexec,
  aptss | spark-store,
  python3-psutil
+Recommends:
+ nvidia-detect
 Description: 硬件信息查看工具
  一个用于Linux系统的硬件信息查看器，支持查看CPU、内存、磁盘、网卡、
  PCI设备、USB设备和显卡等硬件信息
