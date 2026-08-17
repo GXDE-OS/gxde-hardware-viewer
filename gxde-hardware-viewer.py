@@ -15,13 +15,13 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
-                            QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QScrollArea, QToolButton)
+                            QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QToolButton)
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent, QSize
-from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QImage, QFontMetrics, QPainterPath, QRegion, QPen
+from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFontMetrics, QPainterPath, QPen
 from enum import Enum
 import dbus
 
-version = "2.6.3"
+version = "2.6.5"
 
 uname = platform.uname()
 
@@ -975,7 +975,7 @@ class HardwareManager(QMainWindow):
         self.add_sidebar_item(self.tr("Display"), "display")
         self.add_sidebar_item(self.tr("Sound"), "sound")
         self.add_sidebar_item(self.tr("Input Devices"), "input_device")
-        self.add_sidebar_item(self.tr("Driver Update"), "driver_update")
+        self.add_sidebar_item(self.tr("Driver Manage"), "driver_update")
     
         # 5. 创建主内容区域
         self.stack = QStackedWidget()
@@ -989,7 +989,7 @@ class HardwareManager(QMainWindow):
         self.stack.addWidget(self.create_display_page())
         self.stack.addWidget(self.create_sound_page())
         self.stack.addWidget(self.create_input_page())
-        self.stack.addWidget(self.create_driver_update_page())
+        self.stack.addWidget(self.create_driver_manage_page())
     
         # 7. 将侧边栏和堆栈窗口添加到内容布局
         content_layout.addWidget(self.sidebar)
@@ -2048,16 +2048,16 @@ class HardwareManager(QMainWindow):
         layout.addStretch()
         return widget
 
-    def create_driver_update_page(self):
-        """创建驱动更新页面"""
+    def create_driver_manage_page(self):
+        """创建驱动管理页面"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
         layout.setSpacing(self.scaled(10))
         
         label1 = QLabel(self.tr(
-            "⚠️ Warning: This feature will update drivers and the kernel. Please make sure you know what you are doing!\n"
-            "In theory, we probably shouldn't encounter any strange problems (and even if we do, it shouldn't be a disaster).\n"
+            "⚠️ Warning: This feature will install or update drivers and the kernel.\n" 
+            "Please make sure you know what you are doing!\n"
             "It is recommended to back up the system and data first.\n"
         ))
 
@@ -2068,21 +2068,21 @@ class HardwareManager(QMainWindow):
         label1.setStyleSheet("color: #E6004C;")        
         layout.addWidget(label1)
 
-        label2 = QLabel(self.tr('Please select the driver you want to update:'))
+        label2 = QLabel(self.tr('Please select the driver you want to install or update:'))
         font = label2.font()
         font.setBold(True)
         label2.setFont(font)
         layout.addWidget(label2)
 
         self.list_widget = QListWidget()
-        self.list_widget.addItem(self.tr("Please click the 'Check for Updates' button to get available driver updates."))  
+        self.list_widget.addItem(self.tr("Please click the 'Check Driver' button to get available driver&driver updates."))  
         layout.addWidget(self.list_widget)
 
-        self.update_btn = QPushButton(self.tr("Update"))
+        self.update_btn = QPushButton(self.tr("Apply"))
         self.update_btn.clicked.connect(self.perform_update)
         self.update_btn.setFixedSize(100, 30)
 
-        self.check_update_btn = QPushButton(self.tr("Check for updates"))
+        self.check_update_btn = QPushButton(self.tr("Check Driver"))
         self.check_update_btn.clicked.connect(self.on_check_updates_clicked)
         self.check_update_btn.setFixedSize(130, 30)
 
@@ -2107,29 +2107,45 @@ class HardwareManager(QMainWindow):
 
 
     def on_source_dialog_closed(self):
-        self.checker = UpdateChecker()
+        # 仅在更新源成功时才继续检查驱动，否则恢复按钮状态
+        if not getattr(self.source_dialog, '_succeeded', False):
+            self.check_update_btn.setEnabled(True)
+            self.check_update_btn.setText(self.tr("Check Driver"))
+            return
+        # 清理上一个尚未退出的 checker，避免线程泄漏
+        if hasattr(self, 'checker') and self.checker is not None:
+            if self.checker.isRunning():
+                self.checker.wait(3000)
+            self.checker.deleteLater()
+        self.checker = DriverChecker(self)
         self.checker.finished.connect(self.on_update_check_finished)
         self.checker.start()
 
     def on_update_source_error(self, error_message):
-        self.check_update_btn.setEnabled(True)
-        self.check_update_btn.setText(self.tr("Check for updates"))
+        # 按钮状态由 on_source_dialog_closed 统一恢复，这里只负责提示错误
         QMessageBox.critical(self, self.tr("Error"), error_message)
 
-    def on_update_check_finished(self, driver_pkgs):
+    def on_update_check_finished(self, driver_list):
         """重新启用按钮"""
         self.check_update_btn.setEnabled(True)
-        self.check_update_btn.setText(self.tr("Check for updates"))
+        self.check_update_btn.setText(self.tr("Check Driver"))
 
         # 更新列表
         self.list_widget.clear()
-        if not driver_pkgs:
-            self.list_widget.addItem(self.tr("All drivers and the kernel are up to date~"))
+        if not driver_list:
+            self.list_widget.addItem(self.tr("All drivers are already installed and up to date~"))
             return
-        for name in driver_pkgs:
-            item = QListWidgetItem(name)
+        
+        for pkg_name, status in driver_list:
+            if status == "install":
+                display_text = self.tr("[Install] {}").format(pkg_name)
+            else:  # upgrade
+                display_text = self.tr("[Upgrade] {}").format(pkg_name)
+
+            item = QListWidgetItem(display_text)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             item.setCheckState(Qt.CheckState.Unchecked)
+            item.setData(Qt.ItemDataRole.UserRole, pkg_name)
             self.list_widget.addItem(item)
 
     def perform_update(self):
@@ -2137,22 +2153,37 @@ class HardwareManager(QMainWindow):
         for i in range(self.list_widget.count()):
             item = self.list_widget.item(i)
             if item.checkState() == Qt.CheckState.Checked:
-                selected.append(item.text())
+                pkg_name = item.data(Qt.ItemDataRole.UserRole)
+                if pkg_name:
+                    selected.append(pkg_name)
 
         if not selected:
             QMessageBox.information(self, self.tr("Information"),
-                                self.tr("Please select the driver or kernel to update first"))
+                                self.tr("Please select the driver or kernel first"))
             return
 
         self.update_btn.setEnabled(False)
-        self.update_btn.setText(self.tr("Updating..."))
+        self.update_btn.setText(self.tr("Apply..."))
 
-        dialog = UpdateProgressDialog(selected, self)
+        dialog = ProgressDialog(selected, self)
         dialog.exec()
-        self.on_check_updates_clicked()   
 
         self.update_btn.setEnabled(True)
-        self.update_btn.setText(self.tr("Update"))
+        self.update_btn.setText(self.tr("Apply"))
+        # 仅在安装成功时才自动重新检查，避免失败后反复弹窗
+        if getattr(dialog, '_succeeded', False):
+            QMessageBox.warning(
+                self,
+                self.tr("Restart Required"),
+                self.tr(
+                    "✅ Driver installation/upgrade completed successfully!\n\n"
+                    "It is strongly recommended to restart your computer to ensure the new drivers and kernel take effect.\n\n"
+                    "⚠️ WARNING: A system restart will close all running programs and lose any unsaved data.\n"
+                    "Please save all your open documents before restarting the system."
+                ),
+                QMessageBox.StandardButton.Ok
+            )
+            self.on_check_updates_clicked()
 
     def update_memory_info(self):
         """更新内存信息"""
@@ -2951,31 +2982,141 @@ class HardwareManager(QMainWindow):
             
         return devices
 
-class UpdateChecker(QThread):
-    """更新检查"""
+class DriverChecker(QThread):
+    """驱动检查"""
     finished = pyqtSignal(list)  # 传递驱动列表
 
-    def run(self):
-        # 获取可升级包列表
-        result = subprocess.run(['aptss', 'list', '--upgradable'],
-                                capture_output=True, text=True)
-        lines = result.stdout.splitlines()
-        print("Raw lines:", lines)
-        packages = []
-        pattern = re.compile(r'^(\S+)/')
-        for line in lines:
-            match = pattern.match(line)
-            if match:
-                pkg = match.group(1)
-                packages.append(pkg)
-        print("All upgradable packages:", packages)
-        # 3. 过滤出驱动/内核相关的包
-        keywords = ['linux', 'nvidia', 'firmware', 'microcode', 'bluez']
-        exclude_pkgs = ['linuxqq']
-        driver_pkgs = [p for p in packages if any(k in p for k in keywords) and not any(ex in p for ex in exclude_pkgs)]
-        print("Filtered driver packages:", driver_pkgs)
-        self.finished.emit(driver_pkgs)
+    def __init__(self, hardware_manager, parent=None):
+        super().__init__(parent)
+        self.hardware_manager = hardware_manager
 
+    def is_pkg_installed(self, pkg_name):
+        """检查驱动是否已安装"""
+        result = subprocess.run(
+            ['dpkg-query', '-W', '-f=${Status}', pkg_name],
+            capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            return False
+        return 'install ok installed' in result.stdout
+
+    def detect_nvidia_packages(self):
+        """通过 nvidia-detect 检测推荐安装的 NVIDIA 驱动包"""
+        try:
+            result = subprocess.run(
+                ['nvidia-detect'],
+                capture_output=True, text=True, timeout=30
+            )
+            # 注意：nvidia-detect 在显卡仅被旧 legacy 驱动支持、且该驱动不在当前
+            # Debian suite 中时（如 bookworm 下的 390 legacy），会输出提示信息但
+            # 以退出码 1 结束（脚本默认 RET=1，仅找到可推荐包时才置 0）。
+            # 因此不能仅凭 returncode 判定，必须解析输出内容以识别 legacy 驱动。
+            output = result.stdout
+            pkgs = []
+            # "It is recommended to install the" 后下一行缩进输出包名
+            lines = output.splitlines()
+            recommend_found = False
+            pkg_pattern = re.compile(r'nvidia[-\w]*driver[-\w]*')
+            for i, line in enumerate(lines):
+                if 'It is recommended to install' in line:
+                    recommend_found = True
+                    # 先尝试从当前行提取包名
+                    m = pkg_pattern.search(line)
+                    if m:
+                        candidate = m.group(0).strip()
+                        if candidate and candidate not in pkgs:
+                            pkgs.append(candidate)
+                        recommend_found = False
+                    continue
+                if recommend_found:
+                    # 推荐语句下的第一行非空缩进行即为包名
+                    stripped = line.strip()
+                    if stripped:
+                        m = pkg_pattern.search(stripped)
+                        if m:
+                            candidate = m.group(0).strip()
+                            if candidate and candidate not in pkgs:
+                                pkgs.append(candidate)
+                        recommend_found = False
+            # 整份输出中任何包含 nvidia-xxx-driver 的行兜底匹配
+            if not pkgs:
+                for line in lines:
+                    for m in pkg_pattern.finditer(line):
+                        candidate = m.group(0).strip()
+                        # 过滤掉明显不是包名的纯描述词
+                        if candidate in ('nvidia-driver',):
+                            if candidate not in pkgs:
+                                pkgs.append(candidate)
+                            continue
+                        if len(candidate) >= 10 and candidate not in pkgs:
+                            pkgs.append(candidate)
+            # legacy 驱动系列描述，如 "only supported by the 390 legacy drivers series"
+            if not pkgs:
+                legacy_match = re.search(r'only supported by the (\d+) legacy drivers series', output, re.IGNORECASE)
+                if legacy_match:
+                    version = legacy_match.group(1)
+                    candidate = f'nvidia-legacy-{version}xx-driver'
+                    if candidate not in pkgs:
+                        pkgs.append(candidate)  
+            return pkgs
+        except FileNotFoundError:
+            # 系统未安装 nvidia-detect，静默跳过
+            return []
+        except Exception:
+            return []
+
+    def run(self):
+        try:
+            # 获取可升级包列表
+            result = subprocess.run(['apt', 'list', '--upgradable'],
+                                    capture_output=True, text=True, timeout=60)
+            if result.returncode != 0:
+                self.finished.emit([])
+                return
+            lines = result.stdout.splitlines()
+            packages = []
+            pattern = re.compile(r'^(\S+)/')
+            for line in lines:
+                match = pattern.match(line)
+                if match:
+                    pkg = match.group(1)
+                    packages.append(pkg)
+            # 3. 过滤出驱动/内核相关的包
+            keywords = ['linux', 'nvidia', 'firmware', 'microcode', 'bluez', 'broadcom']
+            exclude_pkgs = ['linuxqq']
+            driver_pkgs = [p for p in packages if any(k in p for k in keywords) and not any(ex in p for ex in exclude_pkgs)]
+            # 新增对博通网卡的特别支持
+            net_devices = self.hardware_manager.get_network_devices_info()
+            broadcom_pkgs = ['broadcom-sta-dkms']
+            for device in net_devices:
+                model = (device.get('model') or '').lower()
+                if 'broadcom' in model:
+                    if 'ethernet' not in model:
+                        for pkg in broadcom_pkgs:
+                            if not self.is_pkg_installed(pkg) and pkg not in driver_pkgs:
+                                driver_pkgs.append(pkg)
+                        break
+            # 新增对 NVIDIA 显卡驱动的特别支持：通过 nvidia-detect 精确匹配型号
+            nvidia_pkgs = self.detect_nvidia_packages()
+            for pkg in nvidia_pkgs:
+                # 已安装的包如果在可升级列表里，上面已经加过了；
+                # 未安装但显卡存在时，作为安装项加入
+                if not self.is_pkg_installed(pkg) and pkg not in driver_pkgs:
+                    driver_pkgs.append(pkg)
+
+            result_list = []
+            for pkg in driver_pkgs:
+                if self.is_pkg_installed(pkg):
+                    result_list.append((pkg, "upgrade"))
+                else:
+                    result_list.append((pkg, "install"))
+
+            self.finished.emit(result_list)
+        except Exception as e:
+            # 任何异常都保证发出 finished 信号，避免按钮永久禁用
+            print(self.tr("DriverChecker error: {}").format(e))
+            self.finished.emit([])
+        
 class UpdateSourceProgressDialog(QDialog):
 
     finished_with_error = pyqtSignal(str)  
@@ -2985,6 +3126,7 @@ class UpdateSourceProgressDialog(QDialog):
         self.setWindowTitle(self.tr("Updating software sources"))
         self.setModal(True)
         self.resize(500, 300)
+        self._succeeded = False
 
         layout = QVBoxLayout(self)
         self.text_edit = QTextEdit()
@@ -2996,8 +3138,20 @@ class UpdateSourceProgressDialog(QDialog):
         self.process.readyReadStandardError.connect(self.handle_stderr)
         self.process.finished.connect(self.handle_finished)
 
-        cmd = ['pkexec', 'aptss', 'update']
+        cmd = ['pkexec', 'apt', 'update']
         self.process.start(cmd[0], cmd[1:])
+
+    def closeEvent(self, event):
+        # 进程运行时阻止关闭，避免半中断导致包管理状态不一致
+        if self.process.state() != QProcess.ProcessState.NotRunning:
+            QMessageBox.warning(
+                self, self.tr("Please Wait"),
+                self.tr("The operation is still in progress. Please wait until it finishes."),
+                QMessageBox.StandardButton.Ok
+            )
+            event.ignore()
+        else:
+            event.accept()
 
     def handle_stdout(self):
         data = self.process.readAllStandardOutput().data().decode()
@@ -3008,20 +3162,24 @@ class UpdateSourceProgressDialog(QDialog):
         self.text_edit.append(data)
 
     def handle_finished(self, exit_code, exit_status):
-        if exit_code != 0:
+        if exit_code == 0:
+            self._succeeded = True
+            self.accept()
+        else:
             error_msg = self.tr("Failed to update the software source. The operation was canceled or you do not have sufficient permissions.")
             stderr = self.process.readAllStandardError().data().decode()
             if stderr:
                 error_msg += f"\n\n{stderr}"
             self.finished_with_error.emit(error_msg)
-        self.accept()   
+            self.reject()
 
-class UpdateProgressDialog(QDialog):
+class ProgressDialog(QDialog):
     def __init__(self, packages, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(self.tr("Update Progress"))
+        self.setWindowTitle(self.tr("Update&Install Progress"))
         self.setModal(True)
         self.resize(600, 400)
+        self._succeeded = False
 
         layout = QVBoxLayout(self)
 
@@ -3039,8 +3197,20 @@ class UpdateProgressDialog(QDialog):
         self.process.readyReadStandardError.connect(self.handle_stderr)
         self.process.finished.connect(self.handle_finished)
 
-        cmd = ['pkexec', 'aptss', 'install', '--only-upgrade', '-y'] + packages
+        cmd = ['pkexec', 'apt', 'install', '-y'] + packages
         self.process.start(cmd[0], cmd[1:])
+
+    def closeEvent(self, event):
+        # 安装进程运行时阻止关闭，避免 dpkg 中断导致包管理状态损坏
+        if self.process.state() != QProcess.ProcessState.NotRunning:
+            QMessageBox.warning(
+                self, self.tr("Please Wait"),
+                self.tr("The installation is still in progress. Please wait until it finishes."),
+                QMessageBox.StandardButton.Ok
+            )
+            event.ignore()
+        else:
+            event.accept()
 
     def handle_stdout(self):
         data = self.process.readAllStandardOutput().data().decode()
@@ -3052,10 +3222,11 @@ class UpdateProgressDialog(QDialog):
 
     def handle_finished(self, exit_code, exit_status):
         if exit_code == 0:
+            self._succeeded = True
             self.text_edit.append(self.tr("\n✅ Update successful！"))
         else:
             self.text_edit.append(self.tr("❌ Update failed. Please check the output. If the problem cannot be resolved,"
-                                          "please paste the error onto the forum or QQ group.\n" 
+                                          "please paste the error onto the forum or QQ group.\n"
                                           "forum：https://bbs.spark-app.store/\n"
                                           "QQ group：712629637\n"))
         self.close_btn.setEnabled(True)
