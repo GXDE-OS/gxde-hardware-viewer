@@ -1167,15 +1167,15 @@ class HardwareManager(QMainWindow):
             }
             
             # CPU信息
-            cpu_freq = psutil.cpu_freq()
+            cpu_freq = self.get_cpu_freq_info()
             info[self.tr("CPU Info")] = {
                 self.tr("Processor Model"): self.get_cpu_model(),
                 self.tr("Architecture"): platform.machine(),
                 self.tr("Physical Cores"): psutil.cpu_count(logical=False) or 0,
                 self.tr("Logical Cores"): psutil.cpu_count(logical=True) or 0,
-                self.tr("Current Frequency"): f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else "Unknown",
-                self.tr("Maximum Frequency"): f"{cpu_freq.max:.2f} MHz" if cpu_freq and cpu_freq.max else "Unknown",
-                self.tr("Minimum Frequency"): f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else "Unknown"
+                self.tr("Current Frequency"): f"{cpu_freq['current']:.2f} MHz" if cpu_freq['current'] else self.tr("Unknown"),
+                self.tr("Maximum Frequency"): f"{cpu_freq['max']:.2f} MHz" if cpu_freq['max'] else self.tr("Unknown"),
+                self.tr("Minimum Frequency"): f"{cpu_freq['min']:.2f} MHz" if cpu_freq['min'] else self.tr("Unknown")
             }
             
             # 内存信息
@@ -1502,10 +1502,10 @@ class HardwareManager(QMainWindow):
         logical_cpu = psutil.cpu_count(logical=True) or 0
         
         # 处理CPU频率信息
-        cpu_freq = psutil.cpu_freq()
-        current_freq = f"{cpu_freq.current:.2f} MHz" if cpu_freq and cpu_freq.current else self.tr("Unknown")
-        max_freq = f"{cpu_freq.max:.2f} MHz" if cpu_freq and cpu_freq.max else self.tr("Unknown")
-        min_freq = f"{cpu_freq.min:.2f} MHz" if cpu_freq and cpu_freq.min else self.tr("Unknown")
+        cpu_freq = self.get_cpu_freq_info()
+        current_freq = f"{cpu_freq['current']:.2f} MHz" if cpu_freq['current'] else self.tr("Unknown")
+        max_freq = f"{cpu_freq['max']:.2f} MHz" if cpu_freq['max'] else self.tr("Unknown")
+        min_freq = f"{cpu_freq['min']:.2f} MHz" if cpu_freq['min'] else self.tr("Unknown")
         
         # 保存当前频率标签引用以便更新
         self.cpu_current_freq_label = QLabel(current_freq)
@@ -2329,6 +2329,47 @@ class HardwareManager(QMainWindow):
             result = self.tr("Error getting CPU model: {}").format(str(e))
             self.cache.set(cache_key, result, 3600)
             return result
+
+    def get_cpu_freq_info(self):
+        """获取CPU频率信息（sysfs 需要 root 权限，优先通过 pkexec helper 读取）"""
+        cache_key = "cpu_freq_info"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        freq = {"current": None, "min": None, "max": None}
+
+        try:
+            result = subprocess.run(
+                ["gxde-hardware-viewer-helper", "cpu_freq"],
+                capture_output=True, text=True, timeout=30
+            )
+            if result.returncode == 0 and result.stdout:
+                # helper 正常时只输出 JSON；这里容忍输出前后有额外提示文本
+                start = result.stdout.rfind("{")
+                end = result.stdout.rfind("}")
+                if start != -1 and end > start:
+                    data = json.loads(result.stdout[start:end + 1])
+                    for key in freq:
+                        value = data.get(key)
+                        if isinstance(value, (int, float)):
+                            freq[key] = float(value)
+        except Exception:
+            # helper 可能未安装、pkexec 被取消或输出异常，继续尝试 psutil 兜底
+            pass
+
+        if all(value is None for value in freq.values()):
+            try:
+                cpu_freq = psutil.cpu_freq()
+                if cpu_freq:
+                    freq["current"] = float(cpu_freq.current) if cpu_freq.current else None
+                    freq["min"] = float(cpu_freq.min) if cpu_freq.min else None
+                    freq["max"] = float(cpu_freq.max) if cpu_freq.max else None
+            except Exception:
+                pass
+
+        self.cache.set(cache_key, freq, 10)
+        return freq
     
     def get_physical_disks(self):
         """获取磁盘列表"""
