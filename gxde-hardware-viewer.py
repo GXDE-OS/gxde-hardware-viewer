@@ -609,7 +609,7 @@ class SideBarItem(QWidget):
         # Mod: 窗口自定义背景启用状态
         self._bg_active = False
 
-        self.setFixedHeight(30)
+        self.setFixedHeight(44)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
 
@@ -684,48 +684,56 @@ class SideBarItem(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        item_padding = 13
-        icon_size = 16
-        icon_text_gap = 8
-        check_mark_border = 3
+        card_rect = QRectF(12, 3, self.width() - 18, self.height() - 6)
+        card_radius = 9
+        card_path = QPainterPath()
+        card_path.addRoundedRect(card_rect, card_radius, card_radius)
+        icon_left = 27
+        icon_size = 18
+        icon_text_gap = 9
 
         is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 100
 
         if self._is_checked:
-            bg_color = QColor(230, 0, 76, 80) if is_dark else QColor(230, 0, 76, 60)
-            text_color = QColor(230, 0, 76)
-            painter.setFont(QFont("Sans", 9, QFont.Weight.Bold))
+            bg_color = QColor(230, 0, 76, 36) if is_dark else QColor(255, 246, 249, 235)
+            border_color = QColor(255, 95, 145, 70) if is_dark else QColor(230, 0, 76, 38)
+            text_color = QColor(255, 112, 159) if is_dark else QColor(218, 0, 72)
+            painter.setFont(QFont("Sans", 9, QFont.Weight.DemiBold))
         elif self._is_hovered:
-            bg_color = QColor(255, 255, 255, 30) if is_dark else QColor(0, 0, 0, 20)
+            bg_color = QColor(255, 255, 255, 18) if is_dark else QColor(99, 99, 129, 14)
+            border_color = QColor(0, 0, 0, 0)
             text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
             painter.setFont(QFont("Sans", 9))
         else:
             # Mod: 背景图片启用时，未选中时Item底色交由SideBar负责，不再由Item自行负责
             bg_color = QColor(0, 0, 0, 0)
+            border_color = QColor(0, 0, 0, 0)
             text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
             painter.setFont(QFont("Sans", 9))
 
         if bg_color.alpha() > 0:
-            painter.fillRect(self.rect(), bg_color)
+            painter.setPen(
+                QPen(border_color, 1)
+                if border_color.alpha() > 0
+                else Qt.PenStyle.NoPen
+            )
+            painter.setBrush(bg_color)
+            painter.drawPath(card_path)
 
         icon_top = (self.height() - icon_size) // 2
-        icon_rect = QRect(item_padding, icon_top, icon_size, icon_size)
+        icon_rect = QRect(icon_left, icon_top, icon_size, icon_size)
         pixmap = self.renderTintedIcon(icon_size, text_color)
         if pixmap is not None:
             painter.drawPixmap(icon_rect, pixmap)
 
         painter.setPen(text_color)
-        text_padding_left = item_padding + icon_size + icon_text_gap
+        text_padding_left = icon_left + icon_size + icon_text_gap
         text_rect = QRect(text_padding_left, 0,
-                          self.width() - text_padding_left - icon_text_gap,
+                          self.width() - text_padding_left - 20,
                           self.height())
         fm = QFontMetrics(painter.font())
         elided = fm.elidedText(self._text, Qt.TextElideMode.ElideRight, text_rect.width())
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
-
-        if self._is_checked:
-            x = (self._width_override if self._width_override > 0 else self.width()) - check_mark_border
-            painter.fillRect(x, 0, check_mark_border, self.height(), text_color)
 
 
 # Mod: 将 CentralWidget 的窗口背景图按当前 widget 在窗口中的位置绘制到 painter
@@ -766,8 +774,8 @@ class SideBar(QWidget):
         self._bg_active = False  # Mod: 窗体背景启用状态
 
         self._layout = QVBoxLayout(self)
-        self._layout.setSpacing(0)
-        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(2)
+        self._layout.setContentsMargins(0, 8, 0, 8)
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
     # Mod: SideBar加入paintEvent重载以支持在自定义背景下实现半透明侧栏
