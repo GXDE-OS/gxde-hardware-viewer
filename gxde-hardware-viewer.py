@@ -79,17 +79,13 @@ class TitleBarBtns(QWidget):
         self.layoutGen.setContentsMargins(0, 0, 0, 0)
         
         self.btn = QToolButton(self)
-        self.btn.setFixedSize(self.scaled(30), self.scaled(30))
         self.btn.setAutoRaise(True)
         self.btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn.setStyleSheet("QToolButton { border: none; background: transparent; }")
         self.layoutGen.addWidget(self.btn, 0, Qt.AlignmentFlag.AlignCenter)
 
-        # 疑似对于标题栏来说最大化按钮太大了
-        if self.btnType == TitleBarBtnType.MAXIMIZE:
-            self.btn.setIconSize(QSize(self.scaled(16), self.scaled(16)))
-        else:
-            self.btn.setIconSize(QSize(self.scaled(20), self.scaled(20)))
+        self.btn.setFixedSize(self.scaled(40), self.scaled(40))
+        self.btn.setIconSize(QSize(self.scaled(40), self.scaled(40)))
 
         # 状态跟踪，用以切换 default / hover / pressed 图标
         self._hovered = False
@@ -112,12 +108,15 @@ class TitleBarBtns(QWidget):
 
     def _icon_path(self, state: str) -> str:
         prefix = self._ICON_PREFIX[self.btnType]
+        if (self.btnType == TitleBarBtnType.MAXIMIZE
+                and self.window().isMaximized()):
+            prefix = "unmaximize"
         theme = "dark" if self._is_dark() else "light"
         suffix = f"_{state}_{theme}" if state else f"_{theme}"
         filename = f"{prefix}{suffix}.svg"
         for base in (
-            "/usr/share/gxde-hardware-viewer/icons",
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons"),
+            "/usr/share/gxde-hardware-viewer/icons",
         ):
             path = os.path.join(base, filename)
             if os.path.exists(path):
@@ -137,13 +136,10 @@ class TitleBarBtns(QWidget):
         self.update()
 
     def paintEvent(self, event):
-        # 深色模式下保持透明背景
-        if self._is_dark():
-            return
         if self._pressed:
-            bg = QColor("#EAEAED")
+            bg = QColor(0, 0, 0, 25) if self._is_dark() else QColor(52, 52, 75, 25)
         elif self._hovered:
-            bg = QColor("#EFEFF2")
+            bg = QColor(255, 255, 255, 38) if self._is_dark() else QColor(99, 99, 129, 25)
         else:
             return
 
@@ -952,6 +948,9 @@ class HardwareManager(QMainWindow):
     def changeEvent(self, event):
         if event.type() == QEvent.Type.WindowStateChange:
             self._update_window_shadow()
+            title_bar = getattr(self, 'gxde_title_bar', None)
+            if title_bar is not None:
+                title_bar.max_btn._refresh_icon()
             self.update()
             for w in (getattr(self, 'gxde_title_bar', None),
                       getattr(self, 'sidebar', None),
