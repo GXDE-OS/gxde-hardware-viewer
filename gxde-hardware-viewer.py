@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QToolButton)
+from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent, QSize
 from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFontMetrics, QPainterPath, QPen
 from enum import Enum
@@ -825,6 +826,13 @@ class SideBar(QWidget):
 
 
 class HardwareManager(QMainWindow):
+    # 窗体阴影
+    _SHADOW_RADIUS = 40
+    _SHADOW_OFFSET = QPoint(0, 10)
+    _SHADOW_BORDER = 1
+    _SHADOW_ACTIVE_COLOR = QColor(0, 0, 0, int(255 * 0.30))
+    _SHADOW_INACTIVE_COLOR = QColor(0, 0, 0, int(255 * 0.15))
+
     def __init__(self):
         super().__init__()
     
@@ -913,9 +921,37 @@ class HardwareManager(QMainWindow):
             return 0
         return SettingsUtils().get_window_radius()
 
+    def _normal_shadow_margins(self):
+        extent = self._SHADOW_RADIUS + self._SHADOW_BORDER
+        return (
+            extent - self._SHADOW_OFFSET.x(),
+            extent - self._SHADOW_OFFSET.y(),
+            extent + self._SHADOW_OFFSET.x(),
+            extent + self._SHADOW_OFFSET.y(),
+        )
+
+    def _update_window_shadow(self):
+        effect = getattr(self, 'window_shadow', None)
+        maximized = self.isMaximized() or self.isFullScreen()
+
+        if maximized:
+            self.setContentsMargins(0, 0, 0, 0)
+            if effect is not None:
+                effect.setEnabled(False)
+            return
+
+        self.setContentsMargins(*self._normal_shadow_margins())
+        if effect is not None:
+            effect.setColor(
+                self._SHADOW_ACTIVE_COLOR
+                if self.isActiveWindow()
+                else self._SHADOW_INACTIVE_COLOR
+            )
+            effect.setEnabled(True)
+
     def changeEvent(self, event):
         if event.type() == QEvent.Type.WindowStateChange:
-            # 处理圆角
+            self._update_window_shadow()
             self.update()
             for w in (getattr(self, 'gxde_title_bar', None),
                       getattr(self, 'sidebar', None),
@@ -923,6 +959,8 @@ class HardwareManager(QMainWindow):
                       self.centralWidget()):
                 if w is not None:
                     w.update()
+        elif event.type() == QEvent.Type.ActivationChange:
+            self._update_window_shadow()
         super().changeEvent(event)
 
     def resizeEvent(self, event):
@@ -939,11 +977,24 @@ class HardwareManager(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.setWindowTitle(self.tr("GXDE Hardware Manager"))
-        self.resize(self.scaled(900), self.scaled(600))
+        shadow_left, shadow_top, shadow_right, shadow_bottom = self._normal_shadow_margins()
+        self.setContentsMargins(shadow_left, shadow_top, shadow_right, shadow_bottom)
+        self.resize(
+            self.scaled(900) + shadow_left + shadow_right,
+            self.scaled(600) + shadow_top + shadow_bottom,
+        )
     
         # 创建中心部件
         central_widget = CentralWidget()
         self.setCentralWidget(central_widget)
+
+        self.window_shadow = QGraphicsDropShadowEffect(self)
+        self.window_shadow.setBlurRadius(self._SHADOW_RADIUS)
+        self.window_shadow.setOffset(
+            self._SHADOW_OFFSET.x(), self._SHADOW_OFFSET.y()
+        )
+        self.window_shadow.setColor(self._SHADOW_INACTIVE_COLOR)
+        central_widget.setGraphicsEffect(self.window_shadow)
     
         # 主布局
         main_layout = QVBoxLayout(central_widget)
