@@ -279,6 +279,7 @@ class GXDETitleBar(QWidget):
         # 6. 允许在触屏上使用手指拖拽标题栏
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
         self._touch_drag_offset = None
+        self._mouse_drag_start = None
 
     def scaled(self, value):
         """复用缩放逻辑"""
@@ -309,10 +310,9 @@ class GXDETitleBar(QWidget):
         """切换窗口最大化/还原"""
         if self.parent.isMaximized():
             self.parent.showNormal()
-            self.max_btn.setText("□")
         else:
             self.parent.showMaximized()
-            self.max_btn.setText("▢")
+        self.max_btn._refresh_icon()
 
     # 新的窗口移动实现
     # 目的是为了支持触摸屏上通过手指移动窗口
@@ -329,10 +329,36 @@ class GXDETitleBar(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            if self.handleWindowMove():
-                event.accept()
-                return
+            self._mouse_drag_start = event.globalPosition().toPoint()
+            event.accept()
+            return
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (self._mouse_drag_start is not None
+                and event.buttons() & Qt.MouseButton.LeftButton):
+            distance = (
+                event.globalPosition().toPoint() - self._mouse_drag_start
+            ).manhattanLength()
+            if distance >= QApplication.startDragDistance():
+                self._mouse_drag_start = None
+                if self.handleWindowMove():
+                    event.accept()
+                    return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._mouse_drag_start = None
+        super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._mouse_drag_start = None
+            self.toggle_maximize()
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
     def event(self, e):
         # 注意到触屏下似乎无法正确驱动 startSystemMove
