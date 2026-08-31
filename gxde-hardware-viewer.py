@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QToolButton)
+from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent, QSize
 from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFontMetrics, QPainterPath, QPen
 from enum import Enum
@@ -78,17 +79,13 @@ class TitleBarBtns(QWidget):
         self.layoutGen.setContentsMargins(0, 0, 0, 0)
         
         self.btn = QToolButton(self)
-        self.btn.setFixedSize(self.scaled(30), self.scaled(30))
         self.btn.setAutoRaise(True)
         self.btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn.setStyleSheet("QToolButton { border: none; background: transparent; }")
         self.layoutGen.addWidget(self.btn, 0, Qt.AlignmentFlag.AlignCenter)
 
-        # 疑似对于标题栏来说最大化按钮太大了
-        if self.btnType == TitleBarBtnType.MAXIMIZE:
-            self.btn.setIconSize(QSize(self.scaled(16), self.scaled(16)))
-        else:
-            self.btn.setIconSize(QSize(self.scaled(20), self.scaled(20)))
+        self.btn.setFixedSize(self.scaled(40), self.scaled(40))
+        self.btn.setIconSize(QSize(self.scaled(40), self.scaled(40)))
 
         # 状态跟踪，用以切换 default / hover / pressed 图标
         self._hovered = False
@@ -111,12 +108,15 @@ class TitleBarBtns(QWidget):
 
     def _icon_path(self, state: str) -> str:
         prefix = self._ICON_PREFIX[self.btnType]
+        if (self.btnType == TitleBarBtnType.MAXIMIZE
+                and self.window().isMaximized()):
+            prefix = "unmaximize"
         theme = "dark" if self._is_dark() else "light"
         suffix = f"_{state}_{theme}" if state else f"_{theme}"
         filename = f"{prefix}{suffix}.svg"
         for base in (
-            "/usr/share/gxde-hardware-viewer/icons",
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons"),
+            "/usr/share/gxde-hardware-viewer/icons",
         ):
             path = os.path.join(base, filename)
             if os.path.exists(path):
@@ -136,13 +136,10 @@ class TitleBarBtns(QWidget):
         self.update()
 
     def paintEvent(self, event):
-        # 深色模式下保持透明背景
-        if self._is_dark():
-            return
         if self._pressed:
-            bg = QColor("#EAEAED")
+            bg = QColor(0, 0, 0, 25) if self._is_dark() else QColor(52, 52, 75, 25)
         elif self._hovered:
-            bg = QColor("#EFEFF2")
+            bg = QColor(255, 255, 255, 38) if self._is_dark() else QColor(99, 99, 129, 25)
         else:
             return
 
@@ -282,6 +279,7 @@ class GXDETitleBar(QWidget):
         # 6. 允许在触屏上使用手指拖拽标题栏
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents)
         self._touch_drag_offset = None
+        self._mouse_drag_start = None
 
     def scaled(self, value):
         """复用缩放逻辑"""
@@ -312,10 +310,9 @@ class GXDETitleBar(QWidget):
         """切换窗口最大化/还原"""
         if self.parent.isMaximized():
             self.parent.showNormal()
-            self.max_btn.setText("□")
         else:
             self.parent.showMaximized()
-            self.max_btn.setText("▢")
+        self.max_btn._refresh_icon()
 
     # 新的窗口移动实现
     # 目的是为了支持触摸屏上通过手指移动窗口
@@ -332,10 +329,36 @@ class GXDETitleBar(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            if self.handleWindowMove():
-                event.accept()
-                return
+            self._mouse_drag_start = event.globalPosition().toPoint()
+            event.accept()
+            return
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if (self._mouse_drag_start is not None
+                and event.buttons() & Qt.MouseButton.LeftButton):
+            distance = (
+                event.globalPosition().toPoint() - self._mouse_drag_start
+            ).manhattanLength()
+            if distance >= QApplication.startDragDistance():
+                self._mouse_drag_start = None
+                if self.handleWindowMove():
+                    event.accept()
+                    return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._mouse_drag_start = None
+        super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._mouse_drag_start = None
+            self.toggle_maximize()
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
     def event(self, e):
         # 注意到触屏下似乎无法正确驱动 startSystemMove
@@ -586,7 +609,7 @@ class SideBarItem(QWidget):
         # Mod: 窗口自定义背景启用状态
         self._bg_active = False
 
-        self.setFixedHeight(30)
+        self.setFixedHeight(44)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
 
@@ -661,48 +684,56 @@ class SideBarItem(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        item_padding = 13
-        icon_size = 16
-        icon_text_gap = 8
-        check_mark_border = 3
+        card_rect = QRectF(12, 3, self.width() - 18, self.height() - 6)
+        card_radius = 9
+        card_path = QPainterPath()
+        card_path.addRoundedRect(card_rect, card_radius, card_radius)
+        icon_left = 27
+        icon_size = 18
+        icon_text_gap = 9
 
         is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 100
 
         if self._is_checked:
-            bg_color = QColor(230, 0, 76, 80) if is_dark else QColor(230, 0, 76, 60)
-            text_color = QColor(230, 0, 76)
-            painter.setFont(QFont("Sans", 9, QFont.Weight.Bold))
+            bg_color = QColor(230, 0, 76, 36) if is_dark else QColor(255, 246, 249, 235)
+            border_color = QColor(255, 95, 145, 70) if is_dark else QColor(230, 0, 76, 38)
+            text_color = QColor(255, 112, 159) if is_dark else QColor(218, 0, 72)
+            painter.setFont(QFont("Sans", 9, QFont.Weight.DemiBold))
         elif self._is_hovered:
-            bg_color = QColor(255, 255, 255, 30) if is_dark else QColor(0, 0, 0, 20)
+            bg_color = QColor(255, 255, 255, 18) if is_dark else QColor(99, 99, 129, 14)
+            border_color = QColor(0, 0, 0, 0)
             text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
             painter.setFont(QFont("Sans", 9))
         else:
             # Mod: 背景图片启用时，未选中时Item底色交由SideBar负责，不再由Item自行负责
             bg_color = QColor(0, 0, 0, 0)
+            border_color = QColor(0, 0, 0, 0)
             text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
             painter.setFont(QFont("Sans", 9))
 
         if bg_color.alpha() > 0:
-            painter.fillRect(self.rect(), bg_color)
+            painter.setPen(
+                QPen(border_color, 1)
+                if border_color.alpha() > 0
+                else Qt.PenStyle.NoPen
+            )
+            painter.setBrush(bg_color)
+            painter.drawPath(card_path)
 
         icon_top = (self.height() - icon_size) // 2
-        icon_rect = QRect(item_padding, icon_top, icon_size, icon_size)
+        icon_rect = QRect(icon_left, icon_top, icon_size, icon_size)
         pixmap = self.renderTintedIcon(icon_size, text_color)
         if pixmap is not None:
             painter.drawPixmap(icon_rect, pixmap)
 
         painter.setPen(text_color)
-        text_padding_left = item_padding + icon_size + icon_text_gap
+        text_padding_left = icon_left + icon_size + icon_text_gap
         text_rect = QRect(text_padding_left, 0,
-                          self.width() - text_padding_left - icon_text_gap,
+                          self.width() - text_padding_left - 20,
                           self.height())
         fm = QFontMetrics(painter.font())
         elided = fm.elidedText(self._text, Qt.TextElideMode.ElideRight, text_rect.width())
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
-
-        if self._is_checked:
-            x = (self._width_override if self._width_override > 0 else self.width()) - check_mark_border
-            painter.fillRect(x, 0, check_mark_border, self.height(), text_color)
 
 
 # Mod: 将 CentralWidget 的窗口背景图按当前 widget 在窗口中的位置绘制到 painter
@@ -743,8 +774,8 @@ class SideBar(QWidget):
         self._bg_active = False  # Mod: 窗体背景启用状态
 
         self._layout = QVBoxLayout(self)
-        self._layout.setSpacing(0)
-        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(2)
+        self._layout.setContentsMargins(0, 8, 0, 8)
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
     # Mod: SideBar加入paintEvent重载以支持在自定义背景下实现半透明侧栏
@@ -825,6 +856,13 @@ class SideBar(QWidget):
 
 
 class HardwareManager(QMainWindow):
+    # 窗体阴影
+    _SHADOW_RADIUS = 40
+    _SHADOW_OFFSET = QPoint(0, 10)
+    _SHADOW_BORDER = 1
+    _SHADOW_ACTIVE_COLOR = QColor(0, 0, 0, int(255 * 0.30))
+    _SHADOW_INACTIVE_COLOR = QColor(0, 0, 0, int(255 * 0.15))
+
     def __init__(self):
         super().__init__()
     
@@ -913,9 +951,40 @@ class HardwareManager(QMainWindow):
             return 0
         return SettingsUtils().get_window_radius()
 
+    def _normal_shadow_margins(self):
+        extent = self._SHADOW_RADIUS + self._SHADOW_BORDER
+        return (
+            extent - self._SHADOW_OFFSET.x(),
+            extent - self._SHADOW_OFFSET.y(),
+            extent + self._SHADOW_OFFSET.x(),
+            extent + self._SHADOW_OFFSET.y(),
+        )
+
+    def _update_window_shadow(self):
+        effect = getattr(self, 'window_shadow', None)
+        maximized = self.isMaximized() or self.isFullScreen()
+
+        if maximized:
+            self.setContentsMargins(0, 0, 0, 0)
+            if effect is not None:
+                effect.setEnabled(False)
+            return
+
+        self.setContentsMargins(*self._normal_shadow_margins())
+        if effect is not None:
+            effect.setColor(
+                self._SHADOW_ACTIVE_COLOR
+                if self.isActiveWindow()
+                else self._SHADOW_INACTIVE_COLOR
+            )
+            effect.setEnabled(True)
+
     def changeEvent(self, event):
         if event.type() == QEvent.Type.WindowStateChange:
-            # 处理圆角
+            self._update_window_shadow()
+            title_bar = getattr(self, 'gxde_title_bar', None)
+            if title_bar is not None:
+                title_bar.max_btn._refresh_icon()
             self.update()
             for w in (getattr(self, 'gxde_title_bar', None),
                       getattr(self, 'sidebar', None),
@@ -923,6 +992,8 @@ class HardwareManager(QMainWindow):
                       self.centralWidget()):
                 if w is not None:
                     w.update()
+        elif event.type() == QEvent.Type.ActivationChange:
+            self._update_window_shadow()
         super().changeEvent(event)
 
     def resizeEvent(self, event):
@@ -939,11 +1010,24 @@ class HardwareManager(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.setWindowTitle(self.tr("GXDE Hardware Manager"))
-        self.resize(self.scaled(900), self.scaled(600))
+        shadow_left, shadow_top, shadow_right, shadow_bottom = self._normal_shadow_margins()
+        self.setContentsMargins(shadow_left, shadow_top, shadow_right, shadow_bottom)
+        self.resize(
+            self.scaled(900) + shadow_left + shadow_right,
+            self.scaled(600) + shadow_top + shadow_bottom,
+        )
     
         # 创建中心部件
         central_widget = CentralWidget()
         self.setCentralWidget(central_widget)
+
+        self.window_shadow = QGraphicsDropShadowEffect(self)
+        self.window_shadow.setBlurRadius(self._SHADOW_RADIUS)
+        self.window_shadow.setOffset(
+            self._SHADOW_OFFSET.x(), self._SHADOW_OFFSET.y()
+        )
+        self.window_shadow.setColor(self._SHADOW_INACTIVE_COLOR)
+        central_widget.setGraphicsEffect(self.window_shadow)
     
         # 主布局
         main_layout = QVBoxLayout(central_widget)
