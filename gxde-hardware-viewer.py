@@ -9,6 +9,7 @@ import socket
 import subprocess
 import json
 import os
+import glob
 import time
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
@@ -1706,6 +1707,16 @@ class HardwareManager(QMainWindow):
         swap_info.setLayout(swap_layout)
         layout.addWidget(self.create_group_box(self.tr("Swap Information"), swap_info))
         
+        # zram 压缩内存信息（动态刷新）
+        self.zram_container = QWidget()
+        self.zram_container_layout = QVBoxLayout(self.zram_container)
+        self.zram_container_layout.setSpacing(self.scaled(8))
+        self.zram_container.setLayout(self.zram_container_layout)
+        self.zram_table = None
+        self.zram_device_count = -1
+        self.update_zram_info()
+        layout.addWidget(self.create_group_box(self.tr("zram Compression Memory"), self.zram_container))
+        
         layout.addStretch()
         return widget
         
@@ -2282,6 +2293,9 @@ class HardwareManager(QMainWindow):
         # 更新交换分区详细信息
         self.swap_used_label.setText(self.format_size(swap.used))
         self.swap_free_label.setText(self.format_size(swap.free))
+        
+        # 更新 zram 压缩内存信息
+        self.update_zram_info()
     
     def update_network_info(self):
         """更新网络信息"""
@@ -2302,6 +2316,73 @@ class HardwareManager(QMainWindow):
             self.disk_io_labels['write_count'].setText(str(disk_io.write_count))
             self.disk_io_labels['read_bytes'].setText(self.format_size(disk_io.read_bytes))
             self.disk_io_labels['write_bytes'].setText(self.format_size(disk_io.write_bytes))
+    
+    def update_zram_info(self):
+        """更新 zram 压缩内存信息（动态刷新，每 2 秒调用一次）"""
+        if not hasattr(self, 'zram_container_layout'):
+            return
+        
+        devices = self.get_zram_info()
+        layout = self.zram_container_layout
+        
+        # 无 zram 设备时显示提示
+        if not devices:
+            self.zram_device_count = 0
+            self._rebuild_zram_container(layout, None)
+            layout.addWidget(QLabel(self.tr("No zram device found")))
+            return
+        
+        # 设备数量变化或表格尚未创建时重建表格结构
+        if self.zram_device_count != len(devices) or self.zram_table is None:
+            table = QTableWidget()
+            table.setColumnCount(7)
+            table.setHorizontalHeaderLabels([
+                self.tr("Device"),
+                self.tr("Disk Size"),
+                self.tr("Algorithm"),
+                self.tr("Data Size"),
+                self.tr("Compressed"),
+                self.tr("Memory Used"),
+                self.tr("Compression Ratio"),
+            ])
+            table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+            table.setAlternatingRowColors(True)
+            table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+            table.verticalHeader().setVisible(False)
+            table.setStyleSheet(self.table_style)
+            
+            header = table.horizontalHeader()
+            header.setMinimumHeight(self.scaled(25))
+            header.setStretchLastSection(True)
+            
+            table.setRowCount(len(devices))
+            for row in range(len(devices)):
+                table.setRowHeight(row, self.scaled(25))
+            
+            self._rebuild_zram_container(layout, table)
+            self.zram_table = table
+            self.zram_device_count = len(devices)
+        
+        # 仅更新单元格内容，避免重建造成闪烁
+        for row, dev in enumerate(devices):
+            ratio = (dev['orig_data_size'] / dev['compr_data_size']) if dev['compr_data_size'] else 0
+            self.zram_table.setItem(row, 0, QTableWidgetItem(dev['name']))
+            self.zram_table.setItem(row, 1, QTableWidgetItem(self.format_size(dev['disksize'])))
+            self.zram_table.setItem(row, 2, QTableWidgetItem(dev['algorithm']))
+            self.zram_table.setItem(row, 3, QTableWidgetItem(self.format_size(dev['orig_data_size'])))
+            self.zram_table.setItem(row, 4, QTableWidgetItem(self.format_size(dev['compr_data_size'])))
+            self.zram_table.setItem(row, 5, QTableWidgetItem(self.format_size(dev['mem_used_total'])))
+            self.zram_table.setItem(row, 6, QTableWidgetItem(f"{ratio:.2f}x" if ratio else "-"))
+    
+    def _rebuild_zram_container(self, layout, new_widget):
+        """清空 zram 容器布局并放入新控件"""
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        if new_widget is not None:
+            layout.addWidget(new_widget)
     
     def update_uptime(self):
         """更新系统运行时间"""
@@ -2817,6 +2898,54 @@ class HardwareManager(QMainWindow):
             info[self.tr('Memory Information')] = self.tr("Unable to retrieve")
         
         return info
+    
+    def get_zram_info(self):
+        """获取 zram 压缩内存设备信息（无需 root 权限，读取 sysfs）"""
+        devices = []
+        try:
+            for dev_path in sorted(glob.glob('/sys/block/zram*')):
+                dev_name = os.path.basename(dev_path)
+                info = {
+                    'name': dev_name,
+                    'disksize': 0,
+                    'algorithm': self.tr("Unknown"),
+                    'orig_data_size': 0,
+                    'compr_data_size': 0,
+                    'mem_used_total': 0,
+                }
+                
+                # 设备分配大小 (disksize)
+                try:
+                    with open(os.path.join(dev_path, 'disksize')) as f:
+                        info['disksize'] = int(f.read().strip())
+                except (OSError, ValueError):
+                    pass
+                
+                # 当前压缩算法（sysfs 中以 [ ] 标记当前启用的算法）
+                try:
+                    with open(os.path.join(dev_path, 'comp_algorithm')) as f:
+                        alg_text = f.read().strip()
+                        match = re.search(r'\[([^\]]+)\]', alg_text)
+                        info['algorithm'] = match.group(1) if match else (alg_text.split()[0] if alg_text else self.tr("Unknown"))
+                except OSError:
+                    pass
+                
+                # mm_stat: orig_data_size compr_data_size mem_used_total ...
+                try:
+                    with open(os.path.join(dev_path, 'mm_stat')) as f:
+                        parts = f.read().split()
+                        if len(parts) >= 3:
+                            info['orig_data_size'] = int(parts[0])
+                            info['compr_data_size'] = int(parts[1])
+                            info['mem_used_total'] = int(parts[2])
+                except OSError:
+                    pass
+                
+                devices.append(info)
+        except Exception as e:
+            print(self.tr("Failed to get zram information: {}").format(e))
+        
+        return devices
     
     def get_storage_devices_info(self):
         """获取存储设备信息"""
