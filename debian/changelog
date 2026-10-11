@@ -1,4 +1,4 @@
-gxde-hardware-viewer (2.7.0) UNRELEASED; urgency=medium
+gxde-hardware-viewer (2.7.1) UNRELEASED; urgency=medium
 
   [ zeqi ]
   * 修复系统信息页中硬盘栏会显示 zram 分区的问题
@@ -6,6 +6,10 @@ gxde-hardware-viewer (2.7.0) UNRELEASED; urgency=medium
 
   [ gfdgd_xi ]
   * 更换软件图标（来源于yoyo os）
+  * 支持查看zram信息
+  * 新增滚动条，避免窗口过大影响小屏幕用户使用
+  * 新增部分长标签自动换行，改善UI效果
+  * 支持拖动调整窗口大小
 
   [ CharOfString ]
   * 修改侧边栏样式
@@ -16,7 +20,7 @@ gxde-hardware-viewer (2.7.0) UNRELEASED; urgency=medium
   [ shenmo ]
   * 修复普通用户读取 CPU 频率 sysfs 权限不足导致启动失败的问题
 
- -- gfdgd_xi <3025613752@qq.com>  Tue, 01 Sep 2026 18:23:59 +0800
+ -- gfdgd_xi <3025613752@qq.com>  Sun, 11 Oct 2026 23:22:56 +0800
 
 gxde-hardware-viewer (2.6.2-2) UNRELEASED; urgency=medium
 
