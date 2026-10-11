@@ -12,14 +12,14 @@ import os
 import glob
 import time
 from datetime import datetime
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QScrollArea, QAbstractScrollArea, QVBoxLayout, 
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QScrollArea, QAbstractScrollArea, QAbstractButton, QVBoxLayout, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QToolButton)
 from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent, QSize
-from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFontMetrics, QPainterPath, QPen
+from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFontMetrics, QPainterPath, QPen, QCursor
 from enum import Enum
 import dbus
 
@@ -863,6 +863,8 @@ class HardwareManager(QMainWindow):
     _SHADOW_BORDER = 1
     _SHADOW_ACTIVE_COLOR = QColor(0, 0, 0, int(255 * 0.30))
     _SHADOW_INACTIVE_COLOR = QColor(0, 0, 0, int(255 * 0.15))
+    # 窗口边缘可拖拽调整大小的区域宽度（像素）
+    _RESIZE_MARGIN = 8
 
     def __init__(self):
         super().__init__()
@@ -918,6 +920,9 @@ class HardwareManager(QMainWindow):
     
         # 创建用户界面
         self.initUI()
+
+        # 启用鼠标拖拽窗口边缘/角落调整大小
+        self.init_window_resize()
     
         # 启动硬件监控
         self.monitor_timer = QTimer(self)
@@ -1005,6 +1010,164 @@ class HardwareManager(QMainWindow):
         if overlay is not None and cw is not None:
             overlay.setGeometry(cw.rect())
             overlay.raise_()
+
+    # ---------- 鼠标拖拽调整窗口大小 ----------
+
+    def init_window_resize(self):
+        """启用通过拖拽窗口边缘/角落调整窗口大小"""
+        self._resize_edge = None
+        self._resize_start_geom = None
+        self._resize_start_pos = None
+        self._resize_cursor = None
+
+        # 避免窗口被缩得过小
+        self.setMinimumSize(self.scaled(700), self.scaled(480))
+
+        # 定时刷新光标形状：不依赖子控件是否开启 mouseTracking
+        self._resize_cursor_timer = QTimer(self)
+        self._resize_cursor_timer.setInterval(100)
+        self._resize_cursor_timer.timeout.connect(self.refresh_resize_cursor)
+        self._resize_cursor_timer.start()
+
+        # 全局事件过滤：捕获边缘按下与拖拽过程
+        QApplication.instance().installEventFilter(self)
+
+    def _content_global_rect(self):
+        """返回中央部件（可见内容区）的全局矩形。
+
+        窗口四周有阴影留白，检测的边缘应是内容区边界而非窗口外框。
+        """
+        cw = self.centralWidget()
+        if cw is None:
+            return self.geometry()
+        return QRect(cw.mapToGlobal(QPoint(0, 0)), cw.size())
+
+    def resize_edges_at(self, global_pos):
+        """判断鼠标全局位置处于窗口哪条边缘/角落；不在可调整区域时返回 None"""
+        if self.isMaximized() or self.isFullScreen() or not self.isVisible():
+            return None
+
+        rect = self._content_global_rect()
+        margin = self._RESIZE_MARGIN
+        x, y = global_pos.x(), global_pos.y()
+
+        edges = Qt.Edge(0)
+        if abs(x - rect.left()) <= margin:
+            edges |= Qt.Edge.LeftEdge
+        elif abs(x - rect.right()) <= margin:
+            edges |= Qt.Edge.RightEdge
+        if abs(y - rect.top()) <= margin:
+            edges |= Qt.Edge.TopEdge
+        elif abs(y - rect.bottom()) <= margin:
+            edges |= Qt.Edge.BottomEdge
+        return edges if bool(edges) else None
+
+    @staticmethod
+    def cursor_for_edges(edges):
+        """根据边缘方向返回对应的调整大小光标"""
+        left = bool(edges & Qt.Edge.LeftEdge)
+        right = bool(edges & Qt.Edge.RightEdge)
+        top = bool(edges & Qt.Edge.TopEdge)
+        bottom = bool(edges & Qt.Edge.BottomEdge)
+        if (left and top) or (right and bottom):
+            return Qt.CursorShape.SizeFDiagCursor
+        if (right and top) or (left and bottom):
+            return Qt.CursorShape.SizeBDiagCursor
+        if left or right:
+            return Qt.CursorShape.SizeHorCursor
+        return Qt.CursorShape.SizeVerCursor
+
+    def _is_resize_blocked_widget(self, widget):
+        """标题栏按钮等交互控件不参与边缘调整大小，避免抢走点击"""
+        w = widget
+        while isinstance(w, QWidget):
+            if isinstance(w, (QAbstractButton, TitleBarBtns)):
+                return True
+            # 注意：GXDETitleBar/TitleBarBtns 把 self.parent 覆盖成了属性，
+            # 因此必须用 parentWidget()，不能用 parent()
+            w = w.parentWidget()
+        return False
+
+    def refresh_resize_cursor(self):
+        """根据当前光标位置更新调整大小光标"""
+        if (not self.isActiveWindow() or self.isMaximized()
+                or self.isFullScreen()):
+            cursor = None
+        elif self._resize_edge is not None:
+            cursor = self.cursor_for_edges(self._resize_edge)
+        else:
+            pos = QCursor.pos()
+            widget = QApplication.widgetAt(pos)
+            edges = None
+            if not self._is_resize_blocked_widget(widget):
+                edges = self.resize_edges_at(pos)
+            cursor = self.cursor_for_edges(edges) if edges is not None else None
+
+        if cursor != self._resize_cursor:
+            self._resize_cursor = cursor
+            if cursor is None:
+                self.unsetCursor()
+            else:
+                self.setCursor(cursor)
+
+    def _is_own_widget(self, obj):
+        return isinstance(obj, QWidget) and (obj is self or self.isAncestorOf(obj))
+
+    def start_window_resize(self, edges, global_pos):
+        """优先交由窗口系统处理调整大小，失败时回退到手动调整"""
+        handle = self.windowHandle()
+        if handle is not None and handle.startSystemResize(edges):
+            return
+        self._resize_edge = edges
+        self._resize_start_geom = self.geometry()
+        self._resize_start_pos = global_pos
+
+    def apply_manual_resize(self, global_pos):
+        """手动调整窗口尺寸（窗口系统不支持时的回退方案）"""
+        edges = self._resize_edge
+        geom = self._resize_start_geom
+        if edges is None or geom is None:
+            return
+
+        delta = global_pos - self._resize_start_pos
+        x, y, w, h = geom.x(), geom.y(), geom.width(), geom.height()
+        min_w = max(self.minimumWidth(), self.scaled(600))
+        min_h = max(self.minimumHeight(), self.scaled(400))
+
+        if bool(edges & Qt.Edge.LeftEdge):
+            dx = min(delta.x(), geom.width() - min_w)
+            x, w = geom.x() + dx, geom.width() - dx
+        elif bool(edges & Qt.Edge.RightEdge):
+            w = max(min_w, geom.width() + delta.x())
+        if bool(edges & Qt.Edge.TopEdge):
+            dy = min(delta.y(), geom.height() - min_h)
+            y, h = geom.y() + dy, geom.height() - dy
+        elif bool(edges & Qt.Edge.BottomEdge):
+            h = max(min_h, geom.height() + delta.y())
+
+        self.setGeometry(x, y, w, h)
+
+    def eventFilter(self, obj, event):
+        etype = event.type()
+        if etype == QEvent.Type.MouseButtonPress:
+            if (event.button() == Qt.MouseButton.LeftButton
+                    and self.isActiveWindow() and self._is_own_widget(obj)
+                    and not self._is_resize_blocked_widget(obj)):
+                edges = self.resize_edges_at(event.globalPosition().toPoint())
+                if edges is not None:
+                    self.start_window_resize(edges, event.globalPosition().toPoint())
+                    return True
+        elif etype == QEvent.Type.MouseMove:
+            if self._resize_edge is not None:
+                self.apply_manual_resize(event.globalPosition().toPoint())
+                return True
+        elif etype == QEvent.Type.MouseButtonRelease:
+            if event.button() == Qt.MouseButton.LeftButton and self._resize_edge is not None:
+                self._resize_edge = None
+                self._resize_start_geom = None
+                self._resize_start_pos = None
+                return True
+        return super().eventFilter(obj, event)
 
     def wrap_in_scroll(self, widget):
         """将页面内容包裹进可滚动区域，避免信息过长时撑大整个窗口。
