@@ -12,7 +12,7 @@ import os
 import glob
 import time
 from datetime import datetime
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QScrollArea, QAbstractScrollArea, QVBoxLayout, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
@@ -1006,6 +1006,22 @@ class HardwareManager(QMainWindow):
             overlay.setGeometry(cw.rect())
             overlay.raise_()
 
+    def wrap_in_scroll(self, widget):
+        """将页面内容包裹进可滚动区域，避免信息过长时撑大整个窗口。
+
+        关闭横向滚动条，仅在垂直方向内容超出时显示滚动条。
+        """
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(widget)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # 禁止 scroll area 根据内容自动调整自身大小，否则仍会撑大窗口
+        scroll.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustIgnored)
+        scroll.setContentsMargins(0, 0, 0, 0)
+        return scroll
+
     def initUI(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -1065,16 +1081,16 @@ class HardwareManager(QMainWindow):
         # 5. 创建主内容区域
         self.stack = QStackedWidget()
     
-        # 6. 添加所有页面
-        self.stack.addWidget(self.create_system_info_page())
-        self.stack.addWidget(self.create_cpu_page())
-        self.stack.addWidget(self.create_memory_page())
-        self.stack.addWidget(self.create_storage_page())
-        self.stack.addWidget(self.create_network_page())
-        self.stack.addWidget(self.create_display_page())
-        self.stack.addWidget(self.create_sound_page())
-        self.stack.addWidget(self.create_input_page())
-        self.stack.addWidget(self.create_driver_manage_page())
+        # 6. 添加所有页面（包裹滚动区域，信息过长时出现垂直滚动条）
+        self.stack.addWidget(self.wrap_in_scroll(self.create_system_info_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_cpu_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_memory_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_storage_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_network_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_display_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_sound_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_input_page()))
+        self.stack.addWidget(self.wrap_in_scroll(self.create_driver_manage_page()))
     
         # 7. 将侧边栏和堆栈窗口添加到内容布局
         content_layout.addWidget(self.sidebar)
@@ -1616,7 +1632,10 @@ class HardwareManager(QMainWindow):
         driver_layout.setVerticalSpacing(self.scaled(8))
         
         for key, value in cpu_drivers.items():
-            driver_layout.addRow(f"{key}:", QLabel(value))
+            value_label = QLabel(value)
+            value_label.setWordWrap(True)
+            value_label.setMinimumWidth(0)
+            driver_layout.addRow(f"{key}:", value_label)
         
         driver_widget.setLayout(driver_layout)
         layout.addWidget(self.create_group_box(self.tr("CPU Driver Information"), driver_widget))
@@ -1674,7 +1693,10 @@ class HardwareManager(QMainWindow):
         mem_driver_layout.setVerticalSpacing(self.scaled(8))
         
         for key, value in mem_hw_info.items():
-            mem_driver_layout.addRow(f"{key}:", QLabel(value))
+            value_label = QLabel(value)
+            value_label.setWordWrap(True)
+            value_label.setMinimumWidth(0)
+            mem_driver_layout.addRow(f"{key}:", value_label)
         
         mem_driver_widget.setLayout(mem_driver_layout)
         layout.addWidget(self.create_group_box(self.tr("Memory Hardware & Drivers"), mem_driver_widget))
@@ -1959,6 +1981,9 @@ class HardwareManager(QMainWindow):
         # 显卡信息
         gpu_info = self.get_gpu_info()
         gpu_label = QLabel(f"<b>{self.tr('Graphics Card:')}</b> {gpu_info}")
+        # 允许长文本（如多显卡信息）自动换行，避免超出窗口宽度
+        gpu_label.setWordWrap(True)
+        gpu_label.setMinimumWidth(0)
         # 这边我把样式表去掉，统一一下字体
         display_layout.addWidget(gpu_label)
         
@@ -2014,7 +2039,11 @@ class HardwareManager(QMainWindow):
         driver_layout.setVerticalSpacing(self.scaled(8))
         
         for key, value in display_drivers.items():
-            driver_layout.addRow(f"{key}:", QLabel(value))
+            value_label = QLabel(value)
+            # 允许长文本（如 OpenGL 供应商/渲染器）自动换行，避免超出窗口宽度
+            value_label.setWordWrap(True)
+            value_label.setMinimumWidth(0)
+            driver_layout.addRow(f"{key}:", value_label)
         
         driver_widget.setLayout(driver_layout)
         layout.addWidget(self.create_group_box(self.tr("Display Driver Information"), driver_widget))
@@ -2073,7 +2102,10 @@ class HardwareManager(QMainWindow):
         driver_layout.setVerticalSpacing(self.scaled(8))
         
         for key, value in audio_drivers.items():
-            driver_layout.addRow(f"{key}:", QLabel(value))
+            value_label = QLabel(value)
+            value_label.setWordWrap(True)
+            value_label.setMinimumWidth(0)
+            driver_layout.addRow(f"{key}:", value_label)
         
         driver_widget.setLayout(driver_layout)
         layout.addWidget(self.create_group_box(self.tr("Audio Driver Details"), driver_widget))
