@@ -3680,100 +3680,292 @@ class ProgressDialog(QDialog):
                                           "QQ group：712629637\n"))
         self.close_btn.setEnabled(True)
 
+class AboutDialogContainer(QWidget):
+    """关于对话框的圆角内容容器（外观参考 DAboutDialog）"""
+
+    def __init__(self, parent=None, radius=8):
+        super().__init__(parent)
+        self.setObjectName("AboutContainer")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self._radius = radius
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # 抗锯齿圆角裁剪
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), self._radius, self._radius)
+
+        # 对应 DAboutDialog 的半透明背景与细边框
+        if self.palette().color(QPalette.ColorRole.Window).lightness() < 128:
+            painter.fillPath(path, QColor(30, 31, 35, 219))   # rgba(30,31,35,0.86)
+            border_color = QColor(255, 255, 255, 15)
+        else:
+            painter.fillPath(path, QColor(255, 255, 255, 204))  # rgba(255,255,255,0.80)
+            border_color = QColor(0, 0, 0, 20)
+
+        painter.setPen(QPen(border_color, 1))
+        painter.drawPath(path)
+
+
 class AboutDialog(QDialog):
-    """关于对话框"""
+    """关于对话框（UI 参考 dtk2widget-qt6 的 DAboutDialog）"""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("About GXDE Hardware Viewer"))
-        self.setFixedSize(400, 450)
         self.setModal(True)
 
-        layout = QVBoxLayout()
-        layout.setSpacing(10)
+        # 缩放因子，与主窗口保持一致
+        try:
+            dpi = QApplication.primaryScreen().logicalDotsPerInch()
+            self.scaling_factor = dpi / 96.0
+        except Exception:
+            self.scaling_factor = 1.0
 
-        # 图标
-        icon_label = QLabel()
-        icon = QIcon("/usr/share/gxde-hardware-viewer/icons/gxde-hardware-viewer.svg")
-        icon_label.setPixmap(icon.pixmap(128, 128))
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(icon_label)
+        self._radius = SettingsUtils.get_window_radius()
 
-        # 软件名称
+        # 无边框 + 半透明背景 + 圆角
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        # 外层留白用于绘制阴影
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(
+            self.scaled(20), self.scaled(20), self.scaled(20), self.scaled(20)
+        )
+
+        container = AboutDialogContainer(self, self._radius)
+        # 让容器内的按钮也能拿到缩放因子
+        container.scaling_factor = self.scaling_factor
+
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(self.scaled(24))
+        shadow.setOffset(0, self.scaled(3))
+        shadow.setColor(QColor(0, 0, 0, 80))
+        container.setGraphicsEffect(shadow)
+        outer.addWidget(container)
+
+        # 主题相关配色（对应 DAboutDialog 的亮/暗色主题）
+        is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 128
+        link_color = "#4cc2ff" if is_dark else "#004EE5"
+        desc_color = "#c0c0c0" if is_dark else "#1A1A1A"
+        version_color = "#999999" if is_dark else "#666666"
+        name_style = f"color: #f0f0f0;" if is_dark else ""
+
+        container.setStyleSheet(f"""
+            QLabel#ProductNameLabel {{
+                font-size: {self.scaled(18)}px; {name_style}
+            }}
+            QLabel#VersionLabel {{
+                font-size: {self.scaled(12)}px; color: {version_color};
+            }}
+            QLabel#WebsiteLabel {{
+                font-size: {self.scaled(13)}px; color: {link_color};
+            }}
+            QLabel#AcknowledgementLabel {{
+                font-size: {self.scaled(13)}px; color: {link_color};
+            }}
+            QLabel#DescriptionLabel {{
+                font-size: {self.scaled(11)}px; color: {desc_color};
+            }}
+        """)
+
+        # 主布局：对应 DAboutDialog 的 mainLayout（spacing 0，逐项手工间隔）
+        main = QVBoxLayout(container)
+        main.setContentsMargins(
+            self.scaled(11), self.scaled(20), self.scaled(11), self.scaled(10)
+        )
+        main.setSpacing(0)
+
+        # 右上角关闭按钮（与主窗口标题栏按钮同风格）
+        self.close_btn = TitleBarBtns(container, TitleBarBtnType.CLOSE)
+        self.close_btn.clicked.connect(self.close)
+
+        # 应用图标
+        logo_label = QLabel()
+        logo_label.setContentsMargins(0, 0, 0, 0)
+        icon = QIcon(self._app_icon_path())
+        logo_label.setPixmap(icon.pixmap(self.scaled(80), self.scaled(80)))
+        main.addWidget(logo_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        main.addSpacing(self.scaled(3))
+
+        # 应用名称 18px，不加粗
         name_label = QLabel(self.tr("GXDE Hardware Viewer"))
-        name_font = QFont()
-        name_font.setPointSize(10)
-        name_font.setBold(True)
-        name_label.setFont(name_font)
-        name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(name_label)
+        name_label.setObjectName("ProductNameLabel")
+        main.addWidget(name_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        main.addSpacing(self.scaled(6))
 
-        # 版本号
+        # 版本号 12px
         version_label = QLabel(self.tr("Version: ") + version)
-        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(version_label)
+        version_label.setObjectName("VersionLabel")
+        main.addWidget(version_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        main.addSpacing(self.scaled(8))
 
-        # 系统徽标和官网
-        gxde_vertical_layout = QVBoxLayout()
-        gxde_vertical_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        gxde_icon_label = QLabel()
-        gxde_logo_path = "/usr/share/gxde-hardware-viewer/gxde-logo_new.png"
-        gxde_pixmap = QPixmap(gxde_logo_path)
+        # 组织 Logo（宽幅 Logo，需限制宽度，否则会超出对话框）
+        gxde_pixmap = QPixmap(self._gxde_logo_path())
         if not gxde_pixmap.isNull():
-            scaled_pixmap = gxde_pixmap.scaled(
-                128, 128,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
+            company_logo_label = QLabel()
+            # 按宽度上限等比缩放，保证不超出内容区（约 338px 可用宽度）
+            company_logo_label.setPixmap(
+                gxde_pixmap.scaled(
+                    QSize(self.scaled(200), self.scaled(48)),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
             )
-            gxde_icon_label.setPixmap(scaled_pixmap)
-            gxde_icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            gxde_vertical_layout.addWidget(gxde_icon_label)
-        else:
-            gxde_text_label = QLabel("GXDE")
-            gxde_font = QFont()
-            gxde_font.setPointSize(18)
-            gxde_font.setBold(True)
-            gxde_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            gxde_vertical_layout.addWidget(gxde_text_label)
+            main.addWidget(company_logo_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        url_label = QLabel('<a href="https://www.gxde.top">www.gxde.top</a>')
-        url_label.setOpenExternalLinks(True)
-        url_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        gxde_vertical_layout.addWidget(url_label)
+        # 官网链接
+        website_label = QLabel(
+            "<a href='https://www.gxde.top' style='text-decoration: none;'>www.gxde.top</a>"
+        )
+        website_label.setObjectName("WebsiteLabel")
+        website_label.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        website_label.setFixedHeight(self.scaled(24))
+        website_label.setOpenExternalLinks(True)
+        main.addWidget(website_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        main.addSpacing(self.scaled(5))
 
-        layout.addLayout(gxde_vertical_layout)
+        # 鸣谢入口（点击弹出鸣谢信息）
+        ack_label = QLabel(
+            f"<a href='#' style='text-decoration: none;'>{self.tr('Acknowledgements')}</a>"
+        )
+        ack_label.setObjectName("AcknowledgementLabel")
+        ack_label.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        ack_label.setFixedHeight(self.scaled(24))
+        ack_label.setOpenExternalLinks(False)
+        ack_label.linkActivated.connect(self._show_acknowledgements)
+        main.addWidget(ack_label, alignment=Qt.AlignmentFlag.AlignCenter)
+        main.addSpacing(self.scaled(12))
 
-        # 鸣谢按钮
-        thanks_button = QPushButton(self.tr("Acknowledgments"))
-        thanks_button.setStyleSheet("""
-            QPushButton {
-                border: none;
-                background-color: transparent;
-                color: #E6014C;
-                text-decoration: underline;
-                font-size: 14px;
-            }
-            QPushButton:hover { color: #F380A6; }
-            QPushButton:pressed { color: #E6014C; }
-        """)
-        thanks_button.clicked.connect(lambda: QMessageBox.information(self, self.tr("Acknowledgments"), self.tr("Thanks to all the open source software we've used and to you who are using it now")))
-        layout.addWidget(thanks_button, alignment=Qt.AlignmentFlag.AlignCenter)
-
-        # 功能说明
-        desc_text = self.tr("""
+        # 功能描述 11px，可换行
+        desc_label = QLabel(self.tr("""
         GXDE Hardware Manager is a lightweight hardware information viewer specifically designed for the GXDE desktop environment
-        """)
-        desc_label = QLabel(desc_text)
+        """).strip())
+        desc_label.setObjectName("DescriptionLabel")
         desc_label.setWordWrap(True)
-        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet("margin: 10px 20px;")
-        layout.addWidget(desc_label)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        main.addWidget(desc_label, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
-        button_box.accepted.connect(self.accept)
-        layout.addWidget(button_box)
+        self.setFixedWidth(self.scaled(400))
 
-        self.setLayout(layout)
+        # 支持鼠标拖动移动窗口（无边框对话框需要自行实现）
+        self._drag_start = None
+        self._drag_origin = None
+        self._drag_pending = False
+        container.installEventFilter(self)
+        for w in container.findChildren(QWidget):
+            w.installEventFilter(self)
+
+    def scaled(self, value):
+        return int(value * self.scaling_factor)
+
+    def _is_close_button(self, widget):
+        """判断控件是否属于右上角关闭按钮（拖动需排除按钮）"""
+        w = widget
+        while isinstance(w, QWidget):
+            if isinstance(w, TitleBarBtns):
+                return True
+            w = w.parentWidget()
+        return False
+
+    def eventFilter(self, obj, event):
+        """对话框拖动移动：优先交给窗口系统，失败时回退手动移动"""
+        etype = event.type()
+        if etype == QEvent.Type.MouseButtonPress:
+            if (event.button() == Qt.MouseButton.LeftButton
+                    and not self._is_close_button(obj)):
+                self._drag_start = event.globalPosition().toPoint()
+                self._drag_origin = None
+                self._drag_pending = True
+        elif etype == QEvent.Type.MouseMove:
+            if self._drag_start is None:
+                return super().eventFilter(obj, event)
+            buttons = event.buttons()
+            if buttons & Qt.MouseButton.LeftButton:
+                distance = event.globalPosition().toPoint() - self._drag_start
+                if self._drag_pending:
+                    if distance.manhattanLength() > self.scaled(6):
+                        self._drag_pending = False
+                        handle = self.windowHandle()
+                        if handle is not None and handle.startSystemMove():
+                            return True
+                        # 窗口系统不支持时回退为手动移动
+                        self._drag_origin = self.pos()
+                        self.move(self._drag_origin + distance)
+                        return True
+                elif self._drag_origin is not None:
+                    self.move(self._drag_origin + distance)
+                    return True
+        elif etype == QEvent.Type.MouseButtonRelease:
+            self._drag_pending = False
+            self._drag_origin = None
+            self._drag_start = None
+        return super().eventFilter(obj, event)
+
+    def _app_icon_path(self):
+        """应用图标路径，依次尝试安装目录与源码目录"""
+        for path in (
+            "/usr/share/gxde-hardware-viewer/icons/gxde-hardware-viewer.svg",
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "icons", "gxde-hardware-viewer.svg",
+            ),
+        ):
+            if os.path.exists(path):
+                return path
+        return ""
+
+    def _gxde_logo_path(self):
+        """组织 Logo 路径，依次尝试安装目录与源码目录"""
+        for path in (
+            "/usr/share/gxde-hardware-viewer/gxde-logo_new.png",
+            os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "gxde-logo_new.png"
+            ),
+        ):
+            if os.path.exists(path):
+                return path
+        return ""
+
+    def _show_acknowledgements(self, _link):
+        QMessageBox.information(
+            self,
+            self.tr("Acknowledgements"),
+            self.tr("Thanks to all the open source software we've used "
+                    "and to you who are using it now"),
+        )
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        # 将关闭按钮固定在容器右上角（对应 DAboutDialog 的 DAnchors 锚定）
+        if hasattr(self, 'close_btn'):
+            margin = self.scaled(6)
+            btn = self.close_btn
+            # 注意：TitleBarBtns 把 self.parent 覆盖成了属性，必须用 parentWidget()
+            container = btn.parentWidget()
+            if container is not None:
+                btn.move(
+                    container.width() - btn.width() - margin,
+                    margin,
+                )
+
+    def keyPressEvent(self, event):
+        # Esc 关闭（与 DAboutDialog 一致）
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # 固定宽度时按内容自适应高度（对应 DAboutDialog 的 showEvent 处理）
+        self.resize(self.width(), self.heightForWidth(self.width()))
 
 
 
