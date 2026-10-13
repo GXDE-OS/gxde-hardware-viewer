@@ -418,6 +418,11 @@
       <translation type="unfinished" />
     </message>
     <message>
+      <location filename="../gxde-hardware-viewer.py" line="1751" />
+      <source>System Codename:</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
       <location filename="../gxde-hardware-viewer.py" line="729" />
       <source>Hostname:</source>
       <translation type="unfinished" />

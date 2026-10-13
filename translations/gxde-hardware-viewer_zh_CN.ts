@@ -456,6 +456,11 @@
       <translation>操作系统：</translation>
     </message>
     <message>
+      <location filename="../gxde-hardware-viewer.py" line="1751" />
+      <source>System Codename:</source>
+      <translation>系统代号：</translation>
+    </message>
+    <message>
       <location filename="../gxde-hardware-viewer.py" line="1515" />
       <source>Hostname:</source>
       <translation>主机名：</translation>

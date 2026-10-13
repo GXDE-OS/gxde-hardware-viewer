@@ -4,6 +4,7 @@
 import re
 import sys
 import platform
+import configparser
 import psutil
 import socket
 import subprocess
@@ -1671,6 +1672,59 @@ class HardwareManager(QMainWindow):
 
         self.cache.set(cache_key, result, 3600)  
         return result
+
+    def get_system_codename(self):
+        """读取系统代号及其中文名，返回 (代号, 中文名)，中文名可能为空字符串
+
+        参考 dde-daemon 的 systeminfo/version.go：
+        优先读取 /etc/deepin-version 中 [Addition] 分组的 Milestone，
+        读取失败时回退到 /etc/lsb-release 的 DISTRIB_RELEASE。
+        中文名取自同分组的 Milestone[zh_CN] 条目，不存在时为空。
+        """
+        cache_key = "system_codename"
+        cached = self.cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        codename = ""
+        cn_name = ""
+        # 优先：/etc/deepin-version -> [Addition] Milestone / Milestone[zh_CN]
+        try:
+            config = configparser.ConfigParser(interpolation=None)
+            config.read("/etc/deepin-version", encoding="utf-8")
+            codename = config.get("Addition", "Milestone", fallback="").strip()
+            cn_name = config.get("Addition", "Milestone[zh_CN]", fallback="").strip()
+        except Exception:
+            codename = ""
+            cn_name = ""
+
+        # 回退：/etc/lsb-release -> DISTRIB_RELEASE
+        if not codename:
+            try:
+                with open("/etc/lsb-release", "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip().startswith("DISTRIB_RELEASE="):
+                            codename = line.split("=", 1)[1].strip().strip('"').strip()
+                            break
+            except Exception:
+                codename = ""
+
+        result = (codename, cn_name)
+        self.cache.set(cache_key, result, 3600)
+        return result
+
+    def format_system_codename(self, codename_info):
+        """格式化系统代号：存在中文名时追加括号，如 Lizhi（荔枝）；否则只显示英文代号"""
+        if isinstance(codename_info, tuple):
+            codename, cn_name = codename_info
+        else:
+            codename, cn_name = codename_info, ""
+
+        if not codename:
+            return self.tr("Unknown")
+        if cn_name:
+            return f"{codename}（{cn_name}）"
+        return codename
         
     def create_system_info_page(self):
         """创建系统信息页面"""
@@ -1691,6 +1745,10 @@ class HardwareManager(QMainWindow):
         #uname = platform.uname()
         
         sys_layout.addRow(self.tr("Operating System:"), QLabel(self.get_os_version()))
+        sys_layout.addRow(
+            self.tr("System Codename:"),
+            QLabel(self.format_system_codename(self.get_system_codename()))
+        )
         sys_layout.addRow(self.tr("Hostname:"), QLabel(uname.node))
         sys_layout.addRow(self.tr("Kernel Version:"), QLabel(uname.release))
         sys_layout.addRow(self.tr("System Architecture:"), QLabel(uname.machine))
@@ -3832,7 +3890,7 @@ class AboutDialog(QDialog):
 
         # 鸣谢入口（点击弹出鸣谢信息）
         ack_label = QLabel(
-            f"<a href='#' style='text-decoration: none;'>{self.tr('Acknowledgements')}</a>"
+            f"<a href='#' style='text-decoration: none;'>{self.tr('Acknowledgments')}</a>"
         )
         ack_label.setObjectName("AcknowledgementLabel")
         ack_label.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -3935,7 +3993,7 @@ class AboutDialog(QDialog):
     def _show_acknowledgements(self, _link):
         QMessageBox.information(
             self,
-            self.tr("Acknowledgements"),
+            self.tr("Acknowledgments"),
             self.tr("Thanks to all the open source software we've used "
                     "and to you who are using it now"),
         )
