@@ -1,0 +1,46 @@
+# Maintainer: CharOfString <root@charofstring.cc>
+pkgname=gxde-hardware-viewer-git
+pkgver=2.7.2
+pkgrel=1
+pkgdesc='Hardware information viewer for GXDE'
+arch=('any')
+url="https://github.com/GXDE-OS/gxde-hardware-viewer"
+license=('GPL-3.0-or-later')
+# 与 debian/control 相同；gxde-hardware-viewer-helper 用 dmidecode 读取内存信息
+# As in debian/control; gxde-hardware-viewer-helper reads memory details with dmidecode.
+depends=('python' 'python-pyqt6' 'python-psutil' 'pciutils' 'usbutils' 'polkit' 'dmidecode' 'bash')
+makedepends=('git' 'make' 'python-pyqt6' 'qt6-tools')
+optdepends=('mesa-utils: OpenGL renderer details'
+            'xorg-xrandr: display details'
+            'xorg-xinput: input device details'
+            'xorg-xwininfo: window system details'
+            'ethtool: network adapter details'
+            'alsa-utils: audio device details'
+            'nvidia-utils: NVIDIA GPU details')
+provides=('gxde-hardware-viewer')
+conflicts=('gxde-hardware-viewer')
+source=()
+sha512sums=()
+
+# 直接使用 PKGBUILD 所在的 git 仓库作为源码 ・ Build from the git checkout this PKGBUILD lives in.
+_srcroot() {
+  git -C "$startdir" rev-parse --show-toplevel
+}
+
+prepare() {
+  # make build 会用 pylupdate6 改写已跟踪的 .ts 文件，因此在 $srcdir 中的副本里构建，不改动仓库
+  # "make build" rewrites the tracked .ts files with pylupdate6, so build from
+  # a copy in $srcdir and leave the checkout untouched.
+  rm -rf "$srcdir/$pkgname"
+  mkdir "$srcdir/$pkgname"
+  tar -C "$(_srcroot)" --exclude=./.git -cf - . | tar -C "$srcdir/$pkgname" -xf -
+}
+
+build() {
+  # 与 debian/rules（dh 调用 make）相同 ・ Same as debian/rules (dh runs make).
+  make -C "$srcdir/$pkgname" build
+}
+
+package() {
+  make -C "$srcdir/$pkgname" DESTDIR="$pkgdir" install
+}
