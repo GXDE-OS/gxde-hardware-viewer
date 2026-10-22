@@ -28,6 +28,45 @@ version = "2.7.2"
 
 uname = platform.uname()
 
+# ==================== 主题色板（UI 设计规范） ====================
+# 全应用仅允许使用以下主题色，新增颜色必须先在此登记：
+#   1. 主色 PRIMARY      —— 品牌品红：选中态 / 主按钮 / 链接 / 高亮等交互强调
+#   2. 警示色 WARNING    —— 仅用于危险操作警示（如驱动安装页）
+# 二者之外一律使用中性色（黑 / 白 / 灰及其透明叠加），不构成主题色。
+class ThemeColor:
+    # 主色及其亮变体（同一色相的明度变体，用于深色背景下保证对比度）
+    PRIMARY = QColor(230, 0, 76)          # #E6004C 品牌品红
+    PRIMARY_LIGHT = QColor(255, 95, 145)  # #FF5F91 主色亮变体（深色背景专用）
+    WARNING = QColor(245, 63, 63)         # #F53F3F 警示红
+
+    @staticmethod
+    def primary(alpha: int) -> QColor:
+        """主色的透明变体（同一主题色，仅透明度不同）"""
+        color = QColor(ThemeColor.PRIMARY)
+        color.setAlpha(alpha)
+        return color
+
+    @staticmethod
+    def primary_light(alpha: int) -> QColor:
+        """主色亮变体的透明形式"""
+        color = QColor(ThemeColor.PRIMARY_LIGHT)
+        color.setAlpha(alpha)
+        return color
+
+    @staticmethod
+    def css(color: QColor) -> str:
+        """转为 Qt 样式表可用的 CSS 颜色字符串（含透明度）"""
+        r, g, b, a = color.getRgb()
+        return f"rgba({r}, {g}, {b}, {a})"
+
+def get_scaling_factor() -> float:
+    """获取屏幕逻辑 DPI 对应的缩放因子（与主窗口 init_scaling_factor 一致）"""
+    try:
+        dpi = QApplication.primaryScreen().logicalDotsPerInch()
+        return dpi / 96.0
+    except Exception:
+        return 1.0
+
 class SettingsUtils():
     @staticmethod
     # 从GXDE设置获取窗口圆角设置；若获取失败或非GXDE则默认返回8
@@ -303,7 +342,7 @@ class GXDETitleBar(QWidget):
             }}
             QPushButton:pressed {{
                 color: white;
-                background-color: #F380A6
+                background-color: {ThemeColor.css(ThemeColor.PRIMARY)}
             }}
         """)
         return btn 
@@ -611,9 +650,16 @@ class SideBarItem(QWidget):
         # Mod: 窗口自定义背景启用状态
         self._bg_active = False
 
-        self.setFixedHeight(44)
+        # 缩放因子，与主窗口保持一致（HiDPI 适配）
+        self.scaling_factor = parent.scaling_factor if hasattr(parent, 'scaling_factor') else 1.0
+
+        # 规范：侧边栏项全应用同一高度，且随屏幕缩放
+        self.setFixedHeight(self.scaled(44))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover)
+
+    def scaled(self, value):
+        return int(value * self.scaling_factor)
 
     def setChecked(self, is_checked):
         self._is_checked = is_checked
@@ -686,32 +732,36 @@ class SideBarItem(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        card_rect = QRectF(12, 3, self.width() - 18, self.height() - 6)
-        card_radius = 9
+        # 规范：布局度量随缩放因子等比缩放，保证不同 DPI 下视觉一致
+        card_rect = QRectF(self.scaled(12), self.scaled(3),
+                           self.width() - self.scaled(18), self.height() - self.scaled(6))
+        card_radius = self.scaled(9)
         card_path = QPainterPath()
         card_path.addRoundedRect(card_rect, card_radius, card_radius)
-        icon_left = 27
-        icon_size = 18
-        icon_text_gap = 9
+        icon_left = self.scaled(27)
+        icon_size = self.scaled(18)
+        icon_text_gap = self.scaled(9)
 
         is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 100
 
+        # 规范：选中态仅使用主题色（主色及其透明/亮变体），不使用其他色相
+        font = QFont(self.font())
+        font.setPointSizeF(9 * self.scaling_factor)
         if self._is_checked:
-            bg_color = QColor(230, 0, 76, 36) if is_dark else QColor(255, 246, 249, 235)
-            border_color = QColor(255, 95, 145, 70) if is_dark else QColor(230, 0, 76, 38)
-            text_color = QColor(255, 112, 159) if is_dark else QColor(218, 0, 72)
-            painter.setFont(QFont("Sans", 9, QFont.Weight.DemiBold))
+            bg_color = ThemeColor.primary(36) if is_dark else ThemeColor.primary(25)
+            border_color = ThemeColor.primary_light(70) if is_dark else ThemeColor.primary(38)
+            text_color = ThemeColor.PRIMARY_LIGHT if is_dark else ThemeColor.PRIMARY
+            font.setWeight(QFont.Weight.DemiBold)
         elif self._is_hovered:
             bg_color = QColor(255, 255, 255, 18) if is_dark else QColor(99, 99, 129, 14)
             border_color = QColor(0, 0, 0, 0)
             text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
-            painter.setFont(QFont("Sans", 9))
         else:
             # Mod: 背景图片启用时，未选中时Item底色交由SideBar负责，不再由Item自行负责
             bg_color = QColor(0, 0, 0, 0)
             border_color = QColor(0, 0, 0, 0)
             text_color = QColor(220, 220, 220) if is_dark else QColor(0, 0, 0, 204)
-            painter.setFont(QFont("Sans", 9))
+        painter.setFont(font)
 
         if bg_color.alpha() > 0:
             painter.setPen(
@@ -731,7 +781,7 @@ class SideBarItem(QWidget):
         painter.setPen(text_color)
         text_padding_left = icon_left + icon_size + icon_text_gap
         text_rect = QRect(text_padding_left, 0,
-                          self.width() - text_padding_left - 20,
+                          self.width() - text_padding_left - self.scaled(20),
                           self.height())
         fm = QFontMetrics(painter.font())
         elided = fm.elidedText(self._text, Qt.TextElideMode.ElideRight, text_rect.width())
@@ -771,14 +821,20 @@ class SideBar(QWidget):
     def __init__(self, item_width_override=-1, parent=None):
         super().__init__(parent)
 
+        # 缩放因子，与主窗口保持一致（HiDPI 适配）
+        self.scaling_factor = parent.scaling_factor if hasattr(parent, 'scaling_factor') else 1.0
+
         self._width_override = item_width_override if item_width_override > 0 else -1
         self._item_list = []
         self._bg_active = False  # Mod: 窗体背景启用状态
 
         self._layout = QVBoxLayout(self)
-        self._layout.setSpacing(2)
-        self._layout.setContentsMargins(0, 8, 0, 8)
+        self._layout.setSpacing(self.scaled(2))
+        self._layout.setContentsMargins(0, self.scaled(8), 0, self.scaled(8))
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+    def scaled(self, value):
+        return int(value * self.scaling_factor)
 
     # Mod: SideBar加入paintEvent重载以支持在自定义背景下实现半透明侧栏
     def paintEvent(self, event):
@@ -1638,6 +1694,38 @@ class HardwareManager(QMainWindow):
         group.setLayout(layout)
         return group
 
+    def create_page_button(self, text):
+        """创建页面标准按钮
+
+        UI 设计规范：
+        - 同类型按钮全应用仅此一种尺寸（120x32，随 DPI 缩放），绝不出现两种尺寸；
+        - 仅使用主题色：主色描边/文字，悬停主色浅底，按下主色底白字。
+        """
+        btn = QPushButton(text)
+        btn.setFixedSize(self.scaled(120), self.scaled(32))
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                border: 1px solid {ThemeColor.css(ThemeColor.PRIMARY)};
+                border-radius: {self.scaled(6)}px;
+                padding: {self.scaled(4)}px {self.scaled(12)}px;
+                background: transparent;
+                color: {ThemeColor.css(ThemeColor.PRIMARY)};
+            }}
+            QPushButton:hover {{
+                background: {ThemeColor.css(ThemeColor.primary(25))};
+            }}
+            QPushButton:pressed {{
+                background: {ThemeColor.css(ThemeColor.PRIMARY)};
+                color: white;
+            }}
+            QPushButton:disabled {{
+                border-color: gray;
+                color: gray;
+            }}
+        """)
+        return btn
+
     def get_os_version(self):
         """获取操作系统版本信息"""
         cache_key = "os_version"
@@ -2409,11 +2497,11 @@ class HardwareManager(QMainWindow):
             "It is recommended to back up the system and data first.\n"
         ))
 
+        # 规范：警示文字使用警示色，字号跟随全局缩放，不单独硬编码
         font = label1.font()
-        font.setPointSize(11) 
         font.setBold(True)
         label1.setFont(font)
-        label1.setStyleSheet("color: #E6004C;")        
+        label1.setStyleSheet(f"color: {ThemeColor.css(ThemeColor.WARNING)};")        
         layout.addWidget(label1)
 
         label2 = QLabel(self.tr('Please select the driver you want to install or update:'))
@@ -2426,13 +2514,12 @@ class HardwareManager(QMainWindow):
         self.list_widget.addItem(self.tr("Please click the 'Check Driver' button to get available driver&driver updates."))  
         layout.addWidget(self.list_widget)
 
-        self.update_btn = QPushButton(self.tr("Apply"))
+        # 规范：同类型按钮全应用同一尺寸（120x32，随缩放），绝不出现两种尺寸
+        self.update_btn = self.create_page_button(self.tr("Apply"))
         self.update_btn.clicked.connect(self.perform_update)
-        self.update_btn.setFixedSize(100, 30)
 
-        self.check_update_btn = QPushButton(self.tr("Check Driver"))
+        self.check_update_btn = self.create_page_button(self.tr("Check Driver"))
         self.check_update_btn.clicked.connect(self.on_check_updates_clicked)
-        self.check_update_btn.setFixedSize(130, 30)
 
         button_layout = QHBoxLayout()
         button_layout.addStretch()
@@ -3632,7 +3719,9 @@ class UpdateSourceProgressDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(self.tr("Updating software sources"))
         self.setModal(True)
-        self.resize(500, 300)
+        # 与主窗口保持一致的 HiDPI 缩放
+        self.scaling_factor = get_scaling_factor()
+        self.resize(self.scaled(500), self.scaled(300))
         self._succeeded = False
 
         layout = QVBoxLayout(self)
@@ -3647,6 +3736,9 @@ class UpdateSourceProgressDialog(QDialog):
 
         cmd = ['pkexec', 'apt', 'update']
         self.process.start(cmd[0], cmd[1:])
+
+    def scaled(self, value):
+        return int(value * self.scaling_factor)
 
     def closeEvent(self, event):
         # 进程运行时阻止关闭，避免半中断导致包管理状态不一致
@@ -3685,7 +3777,9 @@ class ProgressDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(self.tr("Update&Install Progress"))
         self.setModal(True)
-        self.resize(600, 400)
+        # 与主窗口保持一致的 HiDPI 缩放
+        self.scaling_factor = get_scaling_factor()
+        self.resize(self.scaled(600), self.scaled(400))
         self._succeeded = False
 
         layout = QVBoxLayout(self)
@@ -3706,6 +3800,9 @@ class ProgressDialog(QDialog):
 
         cmd = ['pkexec', 'apt', 'install', '-y'] + packages
         self.process.start(cmd[0], cmd[1:])
+
+    def scaled(self, value):
+        return int(value * self.scaling_factor)
 
     def closeEvent(self, event):
         # 安装进程运行时阻止关闭，避免 dpkg 中断导致包管理状态损坏
@@ -3809,7 +3906,8 @@ class AboutDialog(QDialog):
 
         # 主题相关配色（对应 DAboutDialog 的亮/暗色主题）
         is_dark = self.palette().color(QPalette.ColorRole.Window).lightness() < 128
-        link_color = "#4cc2ff" if is_dark else "#004EE5"
+        # 规范：链接仅使用主题色（深色背景下用主色亮变体保证对比度）
+        link_color = ThemeColor.css(ThemeColor.PRIMARY_LIGHT if is_dark else ThemeColor.PRIMARY)
         desc_color = "#c0c0c0" if is_dark else "#1A1A1A"
         version_color = "#999999" if is_dark else "#666666"
         name_style = f"color: #f0f0f0;" if is_dark else ""
@@ -4045,7 +4143,7 @@ if __name__ == "__main__":
     
     palette = QPalette()
 
-    palette.setColor(QPalette.ColorRole.Highlight ,QColor("#F383A8"))
+    palette.setColor(QPalette.ColorRole.Highlight, ThemeColor.PRIMARY)
 
     app.setPalette(palette)
 
