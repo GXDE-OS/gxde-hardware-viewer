@@ -32,6 +32,13 @@ except ImportError:
     BoardInfo = None
     translate_board_text = None
 
+# 光驱信息读取库（独立 py 库，便于复用与封装；安装后位于 /usr/share/gxde-hardware-viewer 下）
+try:
+    from hardware_info import CdromInfo, translate_cdrom_text
+except ImportError:
+    CdromInfo = None
+    translate_cdrom_text = None
+
 version = "2.7.2"
 
 uname = platform.uname()
@@ -942,6 +949,8 @@ class HardwareManager(QMainWindow):
         self.disk_io_labels = {}
         # 主板信息读取器（独立库，带缓存）
         self.board_info_reader = BoardInfo() if BoardInfo is not None else None
+        # 光驱信息读取器（独立库，带缓存）
+        self.cdrom_reader = CdromInfo() if CdromInfo is not None else None
     
         # 初始化缩放因子
         self.init_scaling_factor()
@@ -1256,8 +1265,9 @@ class HardwareManager(QMainWindow):
         """按显示顺序返回全部页面定义（key、侧边栏图标、页面构造方法）。
 
         侧边栏与堆栈页面的顺序、翻译刷新、定时刷新索引均以此为准。
+        光驱板块在机器没有光驱时自动隐藏（见 :meth:`_cdrom_available`）。
         """
-        return [
+        pages = [
             ("system", "system_information", self.create_system_info_page),
             ("motherboard", "motherboard", self.create_motherboard_page),
             ("cpu", "cpu", self.create_cpu_page),
@@ -1267,8 +1277,22 @@ class HardwareManager(QMainWindow):
             ("display", "display", self.create_display_page),
             ("sound", "sound", self.create_sound_page),
             ("input", "input_device", self.create_input_page),
+            ("cdrom", "cdrom", self.create_cdrom_page),
             ("driver", "driver_update", self.create_driver_manage_page),
         ]
+        # 机器没有光驱时隐藏光驱板块
+        if not self._cdrom_available():
+            pages = [p for p in pages if p[0] != "cdrom"]
+        return pages
+
+    def _cdrom_available(self):
+        """判断机器是否存在光驱（读取逻辑见独立库 hardware_info/cdrom_info.py）。"""
+        if self.cdrom_reader is None:
+            return False
+        try:
+            return bool(self.get_cdrom_info().get("devices"))
+        except Exception:
+            return False
 
     def _sidebar_titles(self):
         """侧边栏各页面的标题（key 对应 _page_creators）。"""
@@ -1282,6 +1306,7 @@ class HardwareManager(QMainWindow):
             "display": self.tr("Display"),
             "sound": self.tr("Sound"),
             "input": self.tr("Input Devices"),
+            "cdrom": self.tr("Optical Drive"),
             "driver": self.tr("Driver Manage"),
         }
 
@@ -1599,6 +1624,10 @@ class HardwareManager(QMainWindow):
             # 主板信息
             info[self.tr('Motherboard Information')] = self._motherboard_export_info()
 
+            # 光驱信息（机器无光驱时不导出）
+            if self._cdrom_available():
+                info[self.tr('Optical Drive Information')] = self._cdrom_export_info()
+
             # 获取桌面路径
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
             if not os.path.exists(desktop_path):
@@ -1623,6 +1652,34 @@ class HardwareManager(QMainWindow):
         """主板信息导出数据（与主板板块展示内容一致）"""
         export = {}
         for title, rows in self._motherboard_groups(self.get_motherboard_info()):
+            export[title] = {label: value for label, value in rows}
+        return export
+
+    def _cdrom_export_info(self):
+        """光驱信息导出数据（与光驱板块展示内容一致）"""
+        export = {}
+        info = self.get_cdrom_info()
+        for index, device in enumerate(info.get("devices") or []):
+            if len(info.get("devices") or []) > 1:
+                title = self._cdrom_tr("Optical Drive") + (f" {index + 1}" if index else "")
+            else:
+                title = self._cdrom_tr("Optical Drive")
+            rows = []
+            for label, key in [
+                ("Name", "name"),
+                ("Vendor", "vendor"),
+                ("Model", "model"),
+                ("Version", "version"),
+                ("Bus Info", "bus_info"),
+                ("Capabilities", "capabilities"),
+                ("Driver", "driver"),
+                ("Maximum Power", "max_power"),
+                ("Speed", "speed"),
+            ]:
+                value = device.get(key) or ""
+                if value:
+                    rows.append((self._cdrom_tr(label), value))
+            rows.extend((self._cdrom_tr(label), value) for label, value in device.get("other") or [])
             export[title] = {label: value for label, value in rows}
         return export
 
@@ -2603,6 +2660,77 @@ class HardwareManager(QMainWindow):
         
         layout.addStretch()
         return widget
+
+    def create_cdrom_page(self):
+        """创建光驱信息页面（信息口径与 deepin-devicemanager 的光驱板块一致）"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
+        layout.setSpacing(self.scaled(10))
+
+        info = self.get_cdrom_info()
+        devices = info.get("devices") or []
+
+        if not devices:
+            layout.addWidget(QLabel(self.tr("Unable to get optical drive information")))
+            layout.addStretch()
+            return widget
+
+        for index, device in enumerate(devices):
+            # 多光驱时给每个设备一个分组标题
+            if len(devices) > 1:
+                title = self._cdrom_tr("Optical Drive") + (f" {index + 1}" if index else "")
+            else:
+                title = self._cdrom_tr("Optical Drive")
+
+            rows = []
+            for label, key in [
+                ("Name", "name"),
+                ("Vendor", "vendor"),
+                ("Model", "model"),
+                ("Version", "version"),
+                ("Bus Info", "bus_info"),
+                ("Capabilities", "capabilities"),
+                ("Driver", "driver"),
+                ("Maximum Power", "max_power"),
+                ("Speed", "speed"),
+            ]:
+                value = device.get(key) or ""
+                if value:
+                    rows.append((self._cdrom_tr(label), value))
+            rows.extend((self._cdrom_tr(label), value) for label, value in device.get("other") or [])
+
+            content = QWidget()
+            form_layout = QFormLayout()
+            form_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+            form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            form_layout.setHorizontalSpacing(self.scaled(15))
+            form_layout.setVerticalSpacing(self.scaled(8))
+
+            self._add_info_rows(form_layout, rows)
+
+            content.setLayout(form_layout)
+            layout.addWidget(self.create_group_box(title, content))
+
+        layout.addStretch()
+        return widget
+
+    def get_cdrom_info(self):
+        """获取光驱信息（读取逻辑见独立库 hardware_info/cdrom_info.py）"""
+        empty = {"available": False, "source": "", "devices": []}
+        if self.cdrom_reader is None:
+            return empty
+        try:
+            return self.cdrom_reader.get_all()
+        except Exception as e:
+            print(f"Get cdrom info failed: {e}")
+            return empty
+
+    def _cdrom_tr(self, text):
+        """翻译光驱字段名/区块名（翻译条目位于 CdromInfo 上下文）"""
+        if translate_cdrom_text is not None:
+            return translate_cdrom_text(text)
+        return text
 
     def create_driver_manage_page(self):
         """创建驱动管理页面"""

@@ -6,5 +6,6 @@
 """
 
 from .board_info import BoardInfo, tr as translate_board_text
+from .cdrom_info import CdromInfo, tr as translate_cdrom_text
 
-__all__ = ["BoardInfo", "translate_board_text"]
+__all__ = ["BoardInfo", "translate_board_text", "CdromInfo", "translate_cdrom_text"]

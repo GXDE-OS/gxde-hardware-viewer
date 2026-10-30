@@ -4,35 +4,35 @@
   <context>
     <name>AboutDialog</name>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3992" />
+      <location filename="../gxde-hardware-viewer.py" line="4120" />
       <source>About GXDE Hardware Viewer</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="4073" />
+      <location filename="../gxde-hardware-viewer.py" line="4201" />
       <source>GXDE Hardware Viewer</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="4079" />
+      <location filename="../gxde-hardware-viewer.py" line="4207" />
       <source>Version: </source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="4214" />
-      <location filename="../gxde-hardware-viewer.py" line="4111" />
+      <location filename="../gxde-hardware-viewer.py" line="4342" />
+      <location filename="../gxde-hardware-viewer.py" line="4239" />
       <source>Acknowledgments</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="4122" />
+      <location filename="../gxde-hardware-viewer.py" line="4250" />
       <source>
         GXDE Hardware Manager is a lightweight hardware information viewer specifically designed for the GXDE desktop environment
         </source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="4215" />
+      <location filename="../gxde-hardware-viewer.py" line="4343" />
       <source>Thanks to all the open source software we've used and to you who are using it now</source>
       <translation type="unfinished" />
     </message>
@@ -281,9 +281,17 @@
     </message>
   </context>
   <context>
+    <name>CdromInfo</name>
+    <message>
+      <location filename="../hardware_info/cdrom_info.py" line="129" />
+      <source>Optical Drive</source>
+      <translation type="unfinished" />
+    </message>
+  </context>
+  <context>
     <name>DriverChecker</name>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3831" />
+      <location filename="../gxde-hardware-viewer.py" line="3959" />
       <source>DriverChecker error: {}</source>
       <translation type="unfinished" />
     </message>
@@ -291,760 +299,775 @@
   <context>
     <name>HardwareManager</name>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1506" />
-      <location filename="../gxde-hardware-viewer.py" line="1276" />
+      <location filename="../gxde-hardware-viewer.py" line="1531" />
+      <location filename="../gxde-hardware-viewer.py" line="1300" />
       <source>System</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1277" />
+      <location filename="../gxde-hardware-viewer.py" line="1301" />
       <source>Motherboard</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1278" />
+      <location filename="../gxde-hardware-viewer.py" line="1302" />
       <source>CPU</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1279" />
+      <location filename="../gxde-hardware-viewer.py" line="1303" />
       <source>Memory</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1280" />
+      <location filename="../gxde-hardware-viewer.py" line="1304" />
       <source>Storage</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1281" />
+      <location filename="../gxde-hardware-viewer.py" line="1305" />
       <source>Network</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1282" />
+      <location filename="../gxde-hardware-viewer.py" line="1306" />
       <source>Display</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1283" />
+      <location filename="../gxde-hardware-viewer.py" line="1307" />
       <source>Sound</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1284" />
+      <location filename="../gxde-hardware-viewer.py" line="1308" />
       <source>Input Devices</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1285" />
+      <location filename="../gxde-hardware-viewer.py" line="1309" />
+      <source>Optical Drive</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../gxde-hardware-viewer.py" line="1310" />
       <source>Driver Manage</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1292" />
+      <location filename="../gxde-hardware-viewer.py" line="1317" />
       <source>GXDE Hardware Manager</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1467" />
-      <location filename="../gxde-hardware-viewer.py" line="1358" />
+      <location filename="../gxde-hardware-viewer.py" line="1492" />
+      <location filename="../gxde-hardware-viewer.py" line="1383" />
       <source>Export all information to desktop</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1468" />
-      <location filename="../gxde-hardware-viewer.py" line="1360" />
+      <location filename="../gxde-hardware-viewer.py" line="1493" />
+      <location filename="../gxde-hardware-viewer.py" line="1385" />
       <source>Set Background Image</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1469" />
-      <location filename="../gxde-hardware-viewer.py" line="1362" />
+      <location filename="../gxde-hardware-viewer.py" line="1494" />
+      <location filename="../gxde-hardware-viewer.py" line="1387" />
       <source>Remove Background</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1470" />
-      <location filename="../gxde-hardware-viewer.py" line="1364" />
+      <location filename="../gxde-hardware-viewer.py" line="1495" />
+      <location filename="../gxde-hardware-viewer.py" line="1389" />
       <source>About</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1403" />
+      <location filename="../gxde-hardware-viewer.py" line="1428" />
       <source>Copy</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1505" />
+      <location filename="../gxde-hardware-viewer.py" line="1530" />
       <source>System Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1507" />
+      <location filename="../gxde-hardware-viewer.py" line="1532" />
       <source>Host Name</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1508" />
+      <location filename="../gxde-hardware-viewer.py" line="1533" />
       <source>Kernel</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1517" />
-      <location filename="../gxde-hardware-viewer.py" line="1509" />
+      <location filename="../gxde-hardware-viewer.py" line="1542" />
+      <location filename="../gxde-hardware-viewer.py" line="1534" />
       <source>Architecture</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1510" />
+      <location filename="../gxde-hardware-viewer.py" line="1535" />
       <source>Boot Time</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1515" />
+      <location filename="../gxde-hardware-viewer.py" line="1540" />
       <source>CPU Info</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1516" />
+      <location filename="../gxde-hardware-viewer.py" line="1541" />
       <source>Processor Model</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1518" />
+      <location filename="../gxde-hardware-viewer.py" line="1543" />
       <source>Physical Cores</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1519" />
+      <location filename="../gxde-hardware-viewer.py" line="1544" />
       <source>Logical Cores</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1520" />
+      <location filename="../gxde-hardware-viewer.py" line="1545" />
       <source>Current Frequency</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1521" />
+      <location filename="../gxde-hardware-viewer.py" line="1546" />
       <source>Maximum Frequency</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1522" />
+      <location filename="../gxde-hardware-viewer.py" line="1547" />
       <source>Minimum Frequency</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3665" />
-      <location filename="../gxde-hardware-viewer.py" line="3634" />
-      <location filename="../gxde-hardware-viewer.py" line="3632" />
-      <location filename="../gxde-hardware-viewer.py" line="3464" />
-      <location filename="../gxde-hardware-viewer.py" line="3463" />
-      <location filename="../gxde-hardware-viewer.py" line="3438" />
-      <location filename="../gxde-hardware-viewer.py" line="3389" />
-      <location filename="../gxde-hardware-viewer.py" line="3371" />
-      <location filename="../gxde-hardware-viewer.py" line="3328" />
-      <location filename="../gxde-hardware-viewer.py" line="3250" />
-      <location filename="../gxde-hardware-viewer.py" line="2362" />
-      <location filename="../gxde-hardware-viewer.py" line="2361" />
-      <location filename="../gxde-hardware-viewer.py" line="2360" />
-      <location filename="../gxde-hardware-viewer.py" line="2330" />
-      <location filename="../gxde-hardware-viewer.py" line="2251" />
-      <location filename="../gxde-hardware-viewer.py" line="2250" />
-      <location filename="../gxde-hardware-viewer.py" line="2038" />
-      <location filename="../gxde-hardware-viewer.py" line="2037" />
-      <location filename="../gxde-hardware-viewer.py" line="2036" />
-      <location filename="../gxde-hardware-viewer.py" line="1846" />
-      <location filename="../gxde-hardware-viewer.py" line="1578" />
-      <location filename="../gxde-hardware-viewer.py" line="1522" />
-      <location filename="../gxde-hardware-viewer.py" line="1521" />
-      <location filename="../gxde-hardware-viewer.py" line="1520" />
+      <location filename="../gxde-hardware-viewer.py" line="3793" />
+      <location filename="../gxde-hardware-viewer.py" line="3762" />
+      <location filename="../gxde-hardware-viewer.py" line="3760" />
+      <location filename="../gxde-hardware-viewer.py" line="3592" />
+      <location filename="../gxde-hardware-viewer.py" line="3591" />
+      <location filename="../gxde-hardware-viewer.py" line="3566" />
+      <location filename="../gxde-hardware-viewer.py" line="3517" />
+      <location filename="../gxde-hardware-viewer.py" line="3499" />
+      <location filename="../gxde-hardware-viewer.py" line="3456" />
+      <location filename="../gxde-hardware-viewer.py" line="3378" />
+      <location filename="../gxde-hardware-viewer.py" line="2419" />
+      <location filename="../gxde-hardware-viewer.py" line="2418" />
+      <location filename="../gxde-hardware-viewer.py" line="2417" />
+      <location filename="../gxde-hardware-viewer.py" line="2387" />
+      <location filename="../gxde-hardware-viewer.py" line="2308" />
+      <location filename="../gxde-hardware-viewer.py" line="2307" />
+      <location filename="../gxde-hardware-viewer.py" line="2095" />
+      <location filename="../gxde-hardware-viewer.py" line="2094" />
+      <location filename="../gxde-hardware-viewer.py" line="2093" />
+      <location filename="../gxde-hardware-viewer.py" line="1903" />
+      <location filename="../gxde-hardware-viewer.py" line="1603" />
+      <location filename="../gxde-hardware-viewer.py" line="1547" />
+      <location filename="../gxde-hardware-viewer.py" line="1546" />
+      <location filename="../gxde-hardware-viewer.py" line="1545" />
       <source>Unknown</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3358" />
-      <location filename="../gxde-hardware-viewer.py" line="2113" />
-      <location filename="../gxde-hardware-viewer.py" line="1528" />
+      <location filename="../gxde-hardware-viewer.py" line="3486" />
+      <location filename="../gxde-hardware-viewer.py" line="2170" />
+      <location filename="../gxde-hardware-viewer.py" line="1553" />
       <source>Memory Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1529" />
+      <location filename="../gxde-hardware-viewer.py" line="1554" />
       <source>Total Memory</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1530" />
+      <location filename="../gxde-hardware-viewer.py" line="1555" />
       <source>Used</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1531" />
+      <location filename="../gxde-hardware-viewer.py" line="1556" />
       <source>Free</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1532" />
+      <location filename="../gxde-hardware-viewer.py" line="1557" />
       <source>Available</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1533" />
+      <location filename="../gxde-hardware-viewer.py" line="1558" />
       <source>Cache</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1534" />
+      <location filename="../gxde-hardware-viewer.py" line="1559" />
       <source>Memory Usage</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1535" />
+      <location filename="../gxde-hardware-viewer.py" line="1560" />
       <source>Total Swap</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1536" />
+      <location filename="../gxde-hardware-viewer.py" line="1561" />
       <source>Used Swap</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1537" />
+      <location filename="../gxde-hardware-viewer.py" line="1562" />
       <source>Free Swap</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1538" />
+      <location filename="../gxde-hardware-viewer.py" line="1563" />
       <source>Swap Usage</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2800" />
-      <location filename="../gxde-hardware-viewer.py" line="2184" />
-      <location filename="../gxde-hardware-viewer.py" line="1549" />
+      <location filename="../gxde-hardware-viewer.py" line="2928" />
+      <location filename="../gxde-hardware-viewer.py" line="2241" />
+      <location filename="../gxde-hardware-viewer.py" line="1574" />
       <source>Device</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2184" />
-      <location filename="../gxde-hardware-viewer.py" line="1550" />
+      <location filename="../gxde-hardware-viewer.py" line="2241" />
+      <location filename="../gxde-hardware-viewer.py" line="1575" />
       <source>Mount Point</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2184" />
-      <location filename="../gxde-hardware-viewer.py" line="1551" />
+      <location filename="../gxde-hardware-viewer.py" line="2241" />
+      <location filename="../gxde-hardware-viewer.py" line="1576" />
       <source>File System</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2184" />
-      <location filename="../gxde-hardware-viewer.py" line="1552" />
+      <location filename="../gxde-hardware-viewer.py" line="2241" />
+      <location filename="../gxde-hardware-viewer.py" line="1577" />
       <source>Total Capacity</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2184" />
-      <location filename="../gxde-hardware-viewer.py" line="1553" />
+      <location filename="../gxde-hardware-viewer.py" line="2241" />
+      <location filename="../gxde-hardware-viewer.py" line="1578" />
       <source>Available Space</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1557" />
+      <location filename="../gxde-hardware-viewer.py" line="1582" />
       <source>Disk Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2323" />
-      <location filename="../gxde-hardware-viewer.py" line="2316" />
-      <location filename="../gxde-hardware-viewer.py" line="1572" />
-      <location filename="../gxde-hardware-viewer.py" line="1565" />
+      <location filename="../gxde-hardware-viewer.py" line="2380" />
+      <location filename="../gxde-hardware-viewer.py" line="2373" />
+      <location filename="../gxde-hardware-viewer.py" line="1597" />
+      <location filename="../gxde-hardware-viewer.py" line="1590" />
       <source>Empty</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2332" />
-      <location filename="../gxde-hardware-viewer.py" line="1580" />
+      <location filename="../gxde-hardware-viewer.py" line="2389" />
+      <location filename="../gxde-hardware-viewer.py" line="1605" />
       <source>Connected</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2332" />
-      <location filename="../gxde-hardware-viewer.py" line="1580" />
+      <location filename="../gxde-hardware-viewer.py" line="2389" />
+      <location filename="../gxde-hardware-viewer.py" line="1605" />
       <source>Disconnected</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2349" />
-      <location filename="../gxde-hardware-viewer.py" line="2293" />
-      <location filename="../gxde-hardware-viewer.py" line="1583" />
+      <location filename="../gxde-hardware-viewer.py" line="2406" />
+      <location filename="../gxde-hardware-viewer.py" line="2350" />
+      <location filename="../gxde-hardware-viewer.py" line="1608" />
       <source>Interface Name</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2293" />
-      <location filename="../gxde-hardware-viewer.py" line="1584" />
+      <location filename="../gxde-hardware-viewer.py" line="2350" />
+      <location filename="../gxde-hardware-viewer.py" line="1609" />
       <source>IP Address</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2293" />
-      <location filename="../gxde-hardware-viewer.py" line="1585" />
+      <location filename="../gxde-hardware-viewer.py" line="2350" />
+      <location filename="../gxde-hardware-viewer.py" line="1610" />
       <source>MAC Address</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3541" />
-      <location filename="../gxde-hardware-viewer.py" line="2293" />
-      <location filename="../gxde-hardware-viewer.py" line="1586" />
+      <location filename="../gxde-hardware-viewer.py" line="3669" />
+      <location filename="../gxde-hardware-viewer.py" line="2350" />
+      <location filename="../gxde-hardware-viewer.py" line="1611" />
       <source>Status</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1588" />
+      <location filename="../gxde-hardware-viewer.py" line="1613" />
       <source>Network Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1592" />
+      <location filename="../gxde-hardware-viewer.py" line="1617" />
       <source>Display Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1593" />
+      <location filename="../gxde-hardware-viewer.py" line="1618" />
       <source>Graphics Card</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2441" />
-      <location filename="../gxde-hardware-viewer.py" line="1594" />
+      <location filename="../gxde-hardware-viewer.py" line="2498" />
+      <location filename="../gxde-hardware-viewer.py" line="1619" />
       <source>Resolution</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2442" />
-      <location filename="../gxde-hardware-viewer.py" line="1595" />
+      <location filename="../gxde-hardware-viewer.py" line="2499" />
+      <location filename="../gxde-hardware-viewer.py" line="1620" />
       <source>Color Depth</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2443" />
-      <location filename="../gxde-hardware-viewer.py" line="1596" />
+      <location filename="../gxde-hardware-viewer.py" line="2500" />
+      <location filename="../gxde-hardware-viewer.py" line="1621" />
       <source>Refresh Rate</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1600" />
+      <location filename="../gxde-hardware-viewer.py" line="1625" />
       <source>Motherboard Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1609" />
+      <location filename="../gxde-hardware-viewer.py" line="1629" />
+      <source>Optical Drive Information</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../gxde-hardware-viewer.py" line="1638" />
       <source>Hardware Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1617" />
+      <location filename="../gxde-hardware-viewer.py" line="1646" />
       <source>Export Successful</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1617" />
+      <location filename="../gxde-hardware-viewer.py" line="1646" />
       <source>Hardware information has been successfully exported to:
 {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1620" />
+      <location filename="../gxde-hardware-viewer.py" line="1649" />
       <source>Export Failed</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1620" />
+      <location filename="../gxde-hardware-viewer.py" line="1649" />
       <source>An error occurred while exporting hardware information:
 {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1637" />
+      <location filename="../gxde-hardware-viewer.py" line="1694" />
       <source>Select Background Image</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1639" />
+      <location filename="../gxde-hardware-viewer.py" line="1696" />
       <source>Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1782" />
+      <location filename="../gxde-hardware-viewer.py" line="1839" />
       <source>Unable to get system version</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2944" />
-      <location filename="../gxde-hardware-viewer.py" line="1786" />
+      <location filename="../gxde-hardware-viewer.py" line="3072" />
+      <location filename="../gxde-hardware-viewer.py" line="1843" />
       <source>Failed to retrieve: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1793" />
+      <location filename="../gxde-hardware-viewer.py" line="1850" />
       <source>Unknown system version</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1869" />
+      <location filename="../gxde-hardware-viewer.py" line="1926" />
       <source>Operating System:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1871" />
+      <location filename="../gxde-hardware-viewer.py" line="1928" />
       <source>System Codename:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1874" />
+      <location filename="../gxde-hardware-viewer.py" line="1931" />
       <source>Hostname:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1875" />
+      <location filename="../gxde-hardware-viewer.py" line="1932" />
       <source>Kernel Version:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1876" />
+      <location filename="../gxde-hardware-viewer.py" line="1933" />
       <source>System Architecture:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1880" />
+      <location filename="../gxde-hardware-viewer.py" line="1937" />
       <source>Boot Time:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1883" />
+      <location filename="../gxde-hardware-viewer.py" line="1940" />
       <source>System Overview</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1899" />
+      <location filename="../gxde-hardware-viewer.py" line="1956" />
       <source>Processor:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1899" />
+      <location filename="../gxde-hardware-viewer.py" line="1956" />
       <source>{} ({} cores {} threads)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2103" />
-      <location filename="../gxde-hardware-viewer.py" line="1900" />
+      <location filename="../gxde-hardware-viewer.py" line="2160" />
+      <location filename="../gxde-hardware-viewer.py" line="1957" />
       <source>Total Memory:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1906" />
+      <location filename="../gxde-hardware-viewer.py" line="1963" />
       <source>Disks: </source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1909" />
+      <location filename="../gxde-hardware-viewer.py" line="1966" />
       <source>Hardware Overview</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1920" />
+      <location filename="../gxde-hardware-viewer.py" line="1977" />
       <source>Loaded Kernel Modules</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="1937" />
+      <location filename="../gxde-hardware-viewer.py" line="1994" />
       <source>Unable to get motherboard information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2043" />
+      <location filename="../gxde-hardware-viewer.py" line="2100" />
       <source>Processor Model:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2044" />
+      <location filename="../gxde-hardware-viewer.py" line="2101" />
       <source>Architecture:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2045" />
+      <location filename="../gxde-hardware-viewer.py" line="2102" />
       <source>Physical Cores:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2046" />
+      <location filename="../gxde-hardware-viewer.py" line="2103" />
       <source>Logical Cores:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2047" />
+      <location filename="../gxde-hardware-viewer.py" line="2104" />
       <source>Current Frequency:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2048" />
+      <location filename="../gxde-hardware-viewer.py" line="2105" />
       <source>Maximum Frequency:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2049" />
+      <location filename="../gxde-hardware-viewer.py" line="2106" />
       <source>Minimum Frequency:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2052" />
+      <location filename="../gxde-hardware-viewer.py" line="2109" />
       <source>Basic Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2070" />
+      <location filename="../gxde-hardware-viewer.py" line="2127" />
       <source>CPU Driver Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2152" />
-      <location filename="../gxde-hardware-viewer.py" line="2104" />
+      <location filename="../gxde-hardware-viewer.py" line="2209" />
+      <location filename="../gxde-hardware-viewer.py" line="2161" />
       <source>Used:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2153" />
-      <location filename="../gxde-hardware-viewer.py" line="2105" />
+      <location filename="../gxde-hardware-viewer.py" line="2210" />
+      <location filename="../gxde-hardware-viewer.py" line="2162" />
       <source>Free:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2106" />
+      <location filename="../gxde-hardware-viewer.py" line="2163" />
       <source>Available:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2107" />
+      <location filename="../gxde-hardware-viewer.py" line="2164" />
       <source>Cache:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2131" />
+      <location filename="../gxde-hardware-viewer.py" line="2188" />
       <source>Memory Hardware &amp; Drivers</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2151" />
+      <location filename="../gxde-hardware-viewer.py" line="2208" />
       <source>Total Swap:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2159" />
+      <location filename="../gxde-hardware-viewer.py" line="2216" />
       <source>Swap Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2169" />
+      <location filename="../gxde-hardware-viewer.py" line="2226" />
       <source>zram Compression Memory</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2219" />
-      <location filename="../gxde-hardware-viewer.py" line="2218" />
+      <location filename="../gxde-hardware-viewer.py" line="2276" />
+      <location filename="../gxde-hardware-viewer.py" line="2275" />
       <source>No Permission</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2229" />
+      <location filename="../gxde-hardware-viewer.py" line="2286" />
       <source>Disk Partitions</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2238" />
+      <location filename="../gxde-hardware-viewer.py" line="2295" />
       <source>Device Name</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2238" />
+      <location filename="../gxde-hardware-viewer.py" line="2295" />
       <source>Model</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2349" />
-      <location filename="../gxde-hardware-viewer.py" line="2238" />
+      <location filename="../gxde-hardware-viewer.py" line="2406" />
+      <location filename="../gxde-hardware-viewer.py" line="2295" />
       <source>Driver Module</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2256" />
+      <location filename="../gxde-hardware-viewer.py" line="2313" />
       <source>Storage Devices &amp; Drivers</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2272" />
+      <location filename="../gxde-hardware-viewer.py" line="2329" />
       <source>Read Count:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2273" />
+      <location filename="../gxde-hardware-viewer.py" line="2330" />
       <source>Write Count:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2274" />
+      <location filename="../gxde-hardware-viewer.py" line="2331" />
       <source>Read Bytes:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2275" />
+      <location filename="../gxde-hardware-viewer.py" line="2332" />
       <source>Write Bytes:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2278" />
+      <location filename="../gxde-hardware-viewer.py" line="2335" />
       <source>Disk I/O Statistics</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2340" />
+      <location filename="../gxde-hardware-viewer.py" line="2397" />
       <source>Network Interfaces</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2349" />
+      <location filename="../gxde-hardware-viewer.py" line="2406" />
       <source>Device Model</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2367" />
+      <location filename="../gxde-hardware-viewer.py" line="2424" />
       <source>Network Devices &amp; Drivers</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2385" />
+      <location filename="../gxde-hardware-viewer.py" line="2442" />
       <source>Bytes Received:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2386" />
+      <location filename="../gxde-hardware-viewer.py" line="2443" />
       <source>Bytes Sent:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2387" />
+      <location filename="../gxde-hardware-viewer.py" line="2444" />
       <source>Packets Received:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2388" />
+      <location filename="../gxde-hardware-viewer.py" line="2445" />
       <source>Packets Sent:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2389" />
+      <location filename="../gxde-hardware-viewer.py" line="2446" />
       <source>Receive Errors:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2390" />
+      <location filename="../gxde-hardware-viewer.py" line="2447" />
       <source>Transmit Errors:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2393" />
+      <location filename="../gxde-hardware-viewer.py" line="2450" />
       <source>Network Traffic Statistics</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2412" />
+      <location filename="../gxde-hardware-viewer.py" line="2469" />
       <source>Graphics Card:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2424" />
+      <location filename="../gxde-hardware-viewer.py" line="2481" />
       <source>Total VRAM:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2425" />
+      <location filename="../gxde-hardware-viewer.py" line="2482" />
       <source>Available VRAM:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2434" />
+      <location filename="../gxde-hardware-viewer.py" line="2491" />
       <source>Graphics Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2440" />
+      <location filename="../gxde-hardware-viewer.py" line="2497" />
       <source>Screen Name</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2459" />
+      <location filename="../gxde-hardware-viewer.py" line="2516" />
       <source>Connected Displays</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2478" />
+      <location filename="../gxde-hardware-viewer.py" line="2535" />
       <source>Display Driver Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2497" />
+      <location filename="../gxde-hardware-viewer.py" line="2554" />
       <source>Audio Output Devices:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2599" />
-      <location filename="../gxde-hardware-viewer.py" line="2583" />
-      <location filename="../gxde-hardware-viewer.py" line="2567" />
-      <location filename="../gxde-hardware-viewer.py" line="2519" />
-      <location filename="../gxde-hardware-viewer.py" line="2504" />
+      <location filename="../gxde-hardware-viewer.py" line="2656" />
+      <location filename="../gxde-hardware-viewer.py" line="2640" />
+      <location filename="../gxde-hardware-viewer.py" line="2624" />
+      <location filename="../gxde-hardware-viewer.py" line="2576" />
+      <location filename="../gxde-hardware-viewer.py" line="2561" />
       <source>  - {} (Driver: {})</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2512" />
+      <location filename="../gxde-hardware-viewer.py" line="2569" />
       <source>Audio Input Devices:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2522" />
+      <location filename="../gxde-hardware-viewer.py" line="2579" />
       <source>Audio Devices &amp; Drivers</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2540" />
+      <location filename="../gxde-hardware-viewer.py" line="2597" />
       <source>Audio Driver Details</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2560" />
+      <location filename="../gxde-hardware-viewer.py" line="2617" />
       <source>Keyboard:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2576" />
+      <location filename="../gxde-hardware-viewer.py" line="2633" />
       <source>Mouse:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2592" />
+      <location filename="../gxde-hardware-viewer.py" line="2649" />
       <source>Other Input Devices:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2602" />
+      <location filename="../gxde-hardware-viewer.py" line="2659" />
       <source>Input Devices &amp; Drivers</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2614" />
+      <location filename="../gxde-hardware-viewer.py" line="2675" />
+      <source>Unable to get optical drive information</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../gxde-hardware-viewer.py" line="2742" />
       <source>⚠️ Warning: This feature will install or update drivers and the kernel.
 Please make sure you know what you are doing!
 It is recommended to back up the system and data first.
@@ -1052,76 +1075,76 @@ It is recommended to back up the system and data first.
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2627" />
+      <location filename="../gxde-hardware-viewer.py" line="2755" />
       <source>Please select the driver you want to install or update:</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2634" />
+      <location filename="../gxde-hardware-viewer.py" line="2762" />
       <source>Please click the 'Check Driver' button to get available driver&amp;driver updates.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2727" />
-      <location filename="../gxde-hardware-viewer.py" line="2638" />
+      <location filename="../gxde-hardware-viewer.py" line="2855" />
+      <location filename="../gxde-hardware-viewer.py" line="2766" />
       <source>Apply</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2686" />
-      <location filename="../gxde-hardware-viewer.py" line="2668" />
-      <location filename="../gxde-hardware-viewer.py" line="2641" />
+      <location filename="../gxde-hardware-viewer.py" line="2814" />
+      <location filename="../gxde-hardware-viewer.py" line="2796" />
+      <location filename="../gxde-hardware-viewer.py" line="2769" />
       <source>Check Driver</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2656" />
+      <location filename="../gxde-hardware-viewer.py" line="2784" />
       <source>Checking...</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3545" />
-      <location filename="../gxde-hardware-viewer.py" line="2681" />
+      <location filename="../gxde-hardware-viewer.py" line="3673" />
+      <location filename="../gxde-hardware-viewer.py" line="2809" />
       <source>Error</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2691" />
+      <location filename="../gxde-hardware-viewer.py" line="2819" />
       <source>All drivers are already installed and up to date~</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2696" />
+      <location filename="../gxde-hardware-viewer.py" line="2824" />
       <source>[Install] {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2698" />
+      <location filename="../gxde-hardware-viewer.py" line="2826" />
       <source>[Upgrade] {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2716" />
+      <location filename="../gxde-hardware-viewer.py" line="2844" />
       <source>Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2717" />
+      <location filename="../gxde-hardware-viewer.py" line="2845" />
       <source>Please select the driver or kernel first</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2721" />
+      <location filename="../gxde-hardware-viewer.py" line="2849" />
       <source>Apply...</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2732" />
+      <location filename="../gxde-hardware-viewer.py" line="2860" />
       <source>Restart Required</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2733" />
+      <location filename="../gxde-hardware-viewer.py" line="2861" />
       <source>✅ Driver installation/upgrade completed successfully!
 
 It is strongly recommended to restart your computer to ensure the new drivers and kernel take effect.
@@ -1131,296 +1154,296 @@ Please save all your open documents before restarting the system.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2792" />
+      <location filename="../gxde-hardware-viewer.py" line="2920" />
       <source>No zram device found</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2801" />
+      <location filename="../gxde-hardware-viewer.py" line="2929" />
       <source>Disk Size</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2802" />
+      <location filename="../gxde-hardware-viewer.py" line="2930" />
       <source>Algorithm</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2803" />
+      <location filename="../gxde-hardware-viewer.py" line="2931" />
       <source>Data Size</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2804" />
+      <location filename="../gxde-hardware-viewer.py" line="2932" />
       <source>Compressed</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2805" />
+      <location filename="../gxde-hardware-viewer.py" line="2933" />
       <source>Memory Used</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2806" />
+      <location filename="../gxde-hardware-viewer.py" line="2934" />
       <source>Compression Ratio</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2875" />
+      <location filename="../gxde-hardware-viewer.py" line="3003" />
       <source>Primary Screen</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2877" />
+      <location filename="../gxde-hardware-viewer.py" line="3005" />
       <source>Screen</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2920" />
+      <location filename="../gxde-hardware-viewer.py" line="3048" />
       <source>Unable to get screen information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2942" />
+      <location filename="../gxde-hardware-viewer.py" line="3070" />
       <source>Unknown CPU Model</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2950" />
+      <location filename="../gxde-hardware-viewer.py" line="3078" />
       <source>Command does not exist, please check if the path is correct</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="2954" />
+      <location filename="../gxde-hardware-viewer.py" line="3082" />
       <source>Error getting CPU model: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3026" />
+      <location filename="../gxde-hardware-viewer.py" line="3154" />
       <source>No physical disks found (lsblk may not be available)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3055" />
+      <location filename="../gxde-hardware-viewer.py" line="3183" />
       <source>Unknown graphics card (no VGA device detected)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3060" />
+      <location filename="../gxde-hardware-viewer.py" line="3188" />
       <source>Unknown graphics card (please ensure lspci command is available)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3101" />
+      <location filename="../gxde-hardware-viewer.py" line="3229" />
       <source>Failed to get resolution: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3107" />
+      <location filename="../gxde-hardware-viewer.py" line="3235" />
       <source>Unknown resolution</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3119" />
+      <location filename="../gxde-hardware-viewer.py" line="3247" />
       <source>{} bits</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3130" />
-      <location filename="../gxde-hardware-viewer.py" line="3128" />
+      <location filename="../gxde-hardware-viewer.py" line="3258" />
+      <location filename="../gxde-hardware-viewer.py" line="3256" />
       <source>32 bits</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3248" />
+      <location filename="../gxde-hardware-viewer.py" line="3376" />
       <source>{} days {} hours {} minutes</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3266" />
+      <location filename="../gxde-hardware-viewer.py" line="3394" />
       <source> (only showing the first 10)</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3270" />
+      <location filename="../gxde-hardware-viewer.py" line="3398" />
       <source>Unable to get kernel module information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3287" />
+      <location filename="../gxde-hardware-viewer.py" line="3415" />
       <source>Vendor</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3297" />
-      <location filename="../gxde-hardware-viewer.py" line="3294" />
+      <location filename="../gxde-hardware-viewer.py" line="3425" />
+      <location filename="../gxde-hardware-viewer.py" line="3422" />
       <source>Microcode Version</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3303" />
-      <location filename="../gxde-hardware-viewer.py" line="3301" />
+      <location filename="../gxde-hardware-viewer.py" line="3431" />
+      <location filename="../gxde-hardware-viewer.py" line="3429" />
       <source>Scheduler</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3354" />
-      <location filename="../gxde-hardware-viewer.py" line="3308" />
+      <location filename="../gxde-hardware-viewer.py" line="3482" />
+      <location filename="../gxde-hardware-viewer.py" line="3436" />
       <source>Related Driver Modules</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3644" />
-      <location filename="../gxde-hardware-viewer.py" line="3313" />
+      <location filename="../gxde-hardware-viewer.py" line="3772" />
+      <location filename="../gxde-hardware-viewer.py" line="3441" />
       <source>Driver Information</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3644" />
-      <location filename="../gxde-hardware-viewer.py" line="3358" />
-      <location filename="../gxde-hardware-viewer.py" line="3313" />
+      <location filename="../gxde-hardware-viewer.py" line="3772" />
+      <location filename="../gxde-hardware-viewer.py" line="3486" />
+      <location filename="../gxde-hardware-viewer.py" line="3441" />
       <source>Unable to retrieve</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3328" />
-      <location filename="../gxde-hardware-viewer.py" line="3326" />
+      <location filename="../gxde-hardware-viewer.py" line="3456" />
+      <location filename="../gxde-hardware-viewer.py" line="3454" />
       <source>Memory Controller</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3347" />
-      <location filename="../gxde-hardware-viewer.py" line="3338" />
+      <location filename="../gxde-hardware-viewer.py" line="3475" />
+      <location filename="../gxde-hardware-viewer.py" line="3466" />
       <source>Memory Type</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3348" />
-      <location filename="../gxde-hardware-viewer.py" line="3344" />
+      <location filename="../gxde-hardware-viewer.py" line="3476" />
+      <location filename="../gxde-hardware-viewer.py" line="3472" />
       <source>Memory Speed</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3348" />
-      <location filename="../gxde-hardware-viewer.py" line="3347" />
+      <location filename="../gxde-hardware-viewer.py" line="3476" />
+      <location filename="../gxde-hardware-viewer.py" line="3475" />
       <source>Requires root privileges to view</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3357" />
+      <location filename="../gxde-hardware-viewer.py" line="3485" />
       <source>Failed to get memory hardware information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3406" />
+      <location filename="../gxde-hardware-viewer.py" line="3534" />
       <source>Failed to get zram information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3443" />
+      <location filename="../gxde-hardware-viewer.py" line="3571" />
       <source>Failed to get storage device information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3485" />
+      <location filename="../gxde-hardware-viewer.py" line="3613" />
       <source>Failed to get network device information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3504" />
+      <location filename="../gxde-hardware-viewer.py" line="3632" />
       <source>OpenGL Vendor</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3506" />
+      <location filename="../gxde-hardware-viewer.py" line="3634" />
       <source>OpenGL Renderer</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3521" />
+      <location filename="../gxde-hardware-viewer.py" line="3649" />
       <source>Graphics Card {} Driver</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3534" />
-      <location filename="../gxde-hardware-viewer.py" line="3530" />
+      <location filename="../gxde-hardware-viewer.py" line="3662" />
+      <location filename="../gxde-hardware-viewer.py" line="3658" />
       <source>Graphics Card {} Driver Version</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3541" />
+      <location filename="../gxde-hardware-viewer.py" line="3669" />
       <source>No display driver information detected</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3545" />
+      <location filename="../gxde-hardware-viewer.py" line="3673" />
       <source>Unable to get display driver information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3608" />
+      <location filename="../gxde-hardware-viewer.py" line="3736" />
       <source>Failed to get audio device information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3612" />
+      <location filename="../gxde-hardware-viewer.py" line="3740" />
       <source>Built-in Speakers</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3613" />
+      <location filename="../gxde-hardware-viewer.py" line="3741" />
       <source>HDMI Audio Output</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3616" />
+      <location filename="../gxde-hardware-viewer.py" line="3744" />
       <source>Built-in Microphone</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3617" />
+      <location filename="../gxde-hardware-viewer.py" line="3745" />
       <source>Headphone Microphone</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3634" />
-      <location filename="../gxde-hardware-viewer.py" line="3632" />
-      <location filename="../gxde-hardware-viewer.py" line="3629" />
+      <location filename="../gxde-hardware-viewer.py" line="3762" />
+      <location filename="../gxde-hardware-viewer.py" line="3760" />
+      <location filename="../gxde-hardware-viewer.py" line="3757" />
       <source>Audio Service</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3640" />
+      <location filename="../gxde-hardware-viewer.py" line="3768" />
       <source>Kernel Audio Modules</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3643" />
+      <location filename="../gxde-hardware-viewer.py" line="3771" />
       <source>Failed to get audio driver information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3684" />
+      <location filename="../gxde-hardware-viewer.py" line="3812" />
       <source>Failed to get input device information: {}</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3688" />
+      <location filename="../gxde-hardware-viewer.py" line="3816" />
       <source>Generic USB Keyboard</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3691" />
+      <location filename="../gxde-hardware-viewer.py" line="3819" />
       <source>Generic USB Mouse</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3692" />
+      <location filename="../gxde-hardware-viewer.py" line="3820" />
       <source>Touchpad</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3695" />
+      <location filename="../gxde-hardware-viewer.py" line="3823" />
       <source>Webcam</source>
       <translation type="unfinished" />
     </message>
@@ -1428,33 +1451,33 @@ Please save all your open documents before restarting the system.</source>
   <context>
     <name>ProgressDialog</name>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3898" />
+      <location filename="../gxde-hardware-viewer.py" line="4026" />
       <source>Update&amp;Install Progress</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3911" />
+      <location filename="../gxde-hardware-viewer.py" line="4039" />
       <source>Close</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3931" />
+      <location filename="../gxde-hardware-viewer.py" line="4059" />
       <source>Please Wait</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3932" />
+      <location filename="../gxde-hardware-viewer.py" line="4060" />
       <source>The installation is still in progress. Please wait until it finishes.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3950" />
+      <location filename="../gxde-hardware-viewer.py" line="4078" />
       <source>
 ✅ Update successful！</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3952" />
+      <location filename="../gxde-hardware-viewer.py" line="4080" />
       <source>❌ Update failed. Please check the output. If the problem cannot be resolved,please paste the error onto the forum or QQ group.
 forum：https://bbs.spark-app.store/
 QQ group：712629637
@@ -1465,22 +1488,22 @@ QQ group：712629637
   <context>
     <name>UpdateSourceProgressDialog</name>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3840" />
+      <location filename="../gxde-hardware-viewer.py" line="3968" />
       <source>Updating software sources</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3867" />
+      <location filename="../gxde-hardware-viewer.py" line="3995" />
       <source>Please Wait</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3868" />
+      <location filename="../gxde-hardware-viewer.py" line="3996" />
       <source>The operation is still in progress. Please wait until it finishes.</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <location filename="../gxde-hardware-viewer.py" line="3888" />
+      <location filename="../gxde-hardware-viewer.py" line="4016" />
       <source>Failed to update the software source. The operation was canceled or you do not have sufficient permissions.</source>
       <translation type="unfinished" />
     </message>
