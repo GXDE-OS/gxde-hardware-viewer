@@ -11,12 +11,14 @@ show_usage() {
 选项:
     memory     显示内存信息 (dmidecode -t 17)
     cpu_freq   显示 CPU 频率信息 (JSON)
+    board      显示主板信息 (dmidecode -t 0,1,2,3,13,16)
     --help     显示此帮助信息
     usage      显示此帮助信息
 
 示例:
     gxde-hardware-viewer-helper memory      # 显示内存信息
     gxde-hardware-viewer-helper cpu_freq    # 显示 CPU 频率信息
+    gxde-hardware-viewer-helper board       # 显示主板信息
     gxde-hardware-viewer-helper --help      # 显示帮助信息
 
 注意: 此脚本需要root权限来读取硬件信息
@@ -26,6 +28,14 @@ EOF
 # 函数：显示内存信息
 show_memory_info() {
     dmidecode -t 17
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+# 函数：显示主板信息（与 deepin-devicemanager 主板板块的 DMI 类型一致）
+show_board_info() {
+    dmidecode -t 0,1,2,3,13,16
     if [ $? -ne 0 ]; then
         return 1
     fi
@@ -145,6 +155,9 @@ case "$1" in
         ;;
     cpu_freq)
         show_cpu_freq_info
+        ;;
+    board)
+        show_board_info
         ;;
     --help|usage|"")
         show_usage

@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""hardware_info —— 硬件信息读取库
+
+与界面无关的硬件信息读取模块集合，便于主程序及其他工具复用与封装。
+"""
+
+from .board_info import BoardInfo, tr as translate_board_text
+
+__all__ = ["BoardInfo", "translate_board_text"]

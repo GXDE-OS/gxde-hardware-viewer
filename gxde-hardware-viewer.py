@@ -24,6 +24,14 @@ from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFont
 from enum import Enum
 import dbus
 
+# 主板信息读取库（独立 py 库，便于复用与封装；安装后位于 /usr/share/gxde-hardware-viewer 下）
+sys.path.append("/usr/share/gxde-hardware-viewer")
+try:
+    from hardware_info import BoardInfo, translate_board_text
+except ImportError:
+    BoardInfo = None
+    translate_board_text = None
+
 version = "2.7.2"
 
 uname = platform.uname()
@@ -929,9 +937,11 @@ class HardwareManager(QMainWindow):
         # 初始化变量
         self.cache = CacheManager()
         self.translator = QTranslator(self)
-        self.current_lang = "en" 
+        self.current_lang = "en"
         self.net_io_labels = {}
         self.disk_io_labels = {}
+        # 主板信息读取器（独立库，带缓存）
+        self.board_info_reader = BoardInfo() if BoardInfo is not None else None
     
         # 初始化缩放因子
         self.init_scaling_factor()
@@ -1242,6 +1252,39 @@ class HardwareManager(QMainWindow):
         scroll.setContentsMargins(0, 0, 0, 0)
         return scroll
 
+    def _page_creators(self):
+        """按显示顺序返回全部页面定义（key、侧边栏图标、页面构造方法）。
+
+        侧边栏与堆栈页面的顺序、翻译刷新、定时刷新索引均以此为准。
+        """
+        return [
+            ("system", "system_information", self.create_system_info_page),
+            ("motherboard", "motherboard", self.create_motherboard_page),
+            ("cpu", "cpu", self.create_cpu_page),
+            ("memory", "ram", self.create_memory_page),
+            ("storage", "rom", self.create_storage_page),
+            ("network", "network", self.create_network_page),
+            ("display", "display", self.create_display_page),
+            ("sound", "sound", self.create_sound_page),
+            ("input", "input_device", self.create_input_page),
+            ("driver", "driver_update", self.create_driver_manage_page),
+        ]
+
+    def _sidebar_titles(self):
+        """侧边栏各页面的标题（key 对应 _page_creators）。"""
+        return {
+            "system": self.tr("System"),
+            "motherboard": self.tr("Motherboard"),
+            "cpu": self.tr("CPU"),
+            "memory": self.tr("Memory"),
+            "storage": self.tr("Storage"),
+            "network": self.tr("Network"),
+            "display": self.tr("Display"),
+            "sound": self.tr("Sound"),
+            "input": self.tr("Input Devices"),
+            "driver": self.tr("Driver Manage"),
+        }
+
     def initUI(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -1288,29 +1331,15 @@ class HardwareManager(QMainWindow):
         self.sidebar.setFixedWidth(sidebar_width)
 
         # 4. 添加侧边栏项目
-        self.add_sidebar_item(self.tr("System"), "system_information")
-        self.add_sidebar_item(self.tr("CPU"), "cpu")
-        self.add_sidebar_item(self.tr("Memory"), "ram")
-        self.add_sidebar_item(self.tr("Storage"), "rom")
-        self.add_sidebar_item(self.tr("Network"), "network")
-        self.add_sidebar_item(self.tr("Display"), "display")
-        self.add_sidebar_item(self.tr("Sound"), "sound")
-        self.add_sidebar_item(self.tr("Input Devices"), "input_device")
-        self.add_sidebar_item(self.tr("Driver Manage"), "driver_update")
-    
+        for key, icon_name, _creator in self._page_creators():
+            self.add_sidebar_item(self._sidebar_titles()[key], icon_name)
+
         # 5. 创建主内容区域
         self.stack = QStackedWidget()
-    
+
         # 6. 添加所有页面（包裹滚动区域，信息过长时出现垂直滚动条）
-        self.stack.addWidget(self.wrap_in_scroll(self.create_system_info_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_cpu_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_memory_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_storage_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_network_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_display_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_sound_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_input_page()))
-        self.stack.addWidget(self.wrap_in_scroll(self.create_driver_manage_page()))
+        for _key, _icon_name, creator in self._page_creators():
+            self.stack.addWidget(self.wrap_in_scroll(creator()))
     
         # 7. 将侧边栏和堆栈窗口添加到内容布局
         content_layout.addWidget(self.sidebar)
@@ -1425,42 +1454,36 @@ class HardwareManager(QMainWindow):
         """重新翻译所有界面文本"""
         # 清除缓存
         self.cache.clear()
-        
-        # 侧边栏项目
-        sidebar_texts = [
-            self.tr("System"), self.tr("CPU"), self.tr("Memory"), 
-            self.tr("Storage"), self.tr("Network"), self.tr("Display"), 
-            self.tr("Sound"), self.tr("Input Devices")
-        ]
-        for i, text in enumerate(sidebar_texts):
-            self.sidebar.item(i).setText(text)
-    
+
+        # 侧边栏项目（顺序与 _page_creators 一致）
+        titles = self._sidebar_titles()
+        for i, (key, _icon_name, _creator) in enumerate(self._page_creators()):
+            self.sidebar.item(i).setText(titles[key])
+
         # 菜单项目
-        menu = self.menu_button.menu()
-        menu.actions()[1].setText(self.tr("Export all information to desktop"))
-        menu.actions()[2].setText(self.tr("About"))
-    
+        menu = self.gxde_title_bar.menu_button.menu()
+        actions = menu.actions()
+        if len(actions) >= 4:
+            actions[0].setText(self.tr("Export all information to desktop"))
+            actions[1].setText(self.tr("Set Background Image"))
+            actions[2].setText(self.tr("Remove Background"))
+            actions[3].setText(self.tr("About"))
+
         # 重新创建所有页面（更新翻译后刷新页面）
         self.refresh_all_pages()
-    
+
     def refresh_all_pages(self):
         """刷新所有页面以更新翻译"""
         current_index = self.stack.currentIndex()
 
         while self.stack.count() > 0:
-            widget = self.stack.widget(0)  
-            self.stack.removeWidget(widget) 
-            widget.deleteLater() 
+            widget = self.stack.widget(0)
+            self.stack.removeWidget(widget)
+            widget.deleteLater()
 
-        # 重新添加所有页面
-        self.stack.addWidget(self.create_system_info_page())
-        self.stack.addWidget(self.create_cpu_page())
-        self.stack.addWidget(self.create_memory_page())
-        self.stack.addWidget(self.create_storage_page())
-        self.stack.addWidget(self.create_network_page())
-        self.stack.addWidget(self.create_display_page())
-        self.stack.addWidget(self.create_sound_page())
-        self.stack.addWidget(self.create_input_page())
+        # 重新添加所有页面（顺序与 initUI 一致）
+        for _key, _icon_name, creator in self._page_creators():
+            self.stack.addWidget(self.wrap_in_scroll(creator()))
 
         # 恢复之前选中的页面
         if current_index < self.stack.count():
@@ -1572,26 +1595,36 @@ class HardwareManager(QMainWindow):
                 self.tr('Color Depth'): self.get_color_depth(),
                 self.tr('Refresh Rate'): self.get_refresh_rate()
             }
-            
+
+            # 主板信息
+            info[self.tr('Motherboard Information')] = self._motherboard_export_info()
+
             # 获取桌面路径
             desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
             if not os.path.exists(desktop_path):
                 desktop_path = os.path.join(os.path.expanduser("~"), "桌面")
-            
+
             # 创建文件名
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{self.tr('Hardware Information')}_{timestamp}.json"
             filepath = os.path.join(desktop_path, filename)
-            
+
             # 写入JSON文件
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(info, f, ensure_ascii=False, indent=4)
-            
+
             # 显示成功消息
             QMessageBox.information(self, self.tr("Export Successful"), self.tr("Hardware information has been successfully exported to:\n{}").format(filepath))
-            
+
         except Exception as e:
             QMessageBox.critical(self, self.tr("Export Failed"), self.tr("An error occurred while exporting hardware information:\n{}").format(str(e)))
+
+    def _motherboard_export_info(self):
+        """主板信息导出数据（与主板板块展示内容一致）"""
+        export = {}
+        for title, rows in self._motherboard_groups(self.get_motherboard_info()):
+            export[title] = {label: value for label, value in rows}
+        return export
 
     def choose_background_image(self):
         """弹出文管对话框选择背景图片"""
@@ -1653,21 +1686,22 @@ class HardwareManager(QMainWindow):
     def update_hardware_info(self):
         """更新硬件信息"""
         current_index = self.stack.currentIndex()
+        page_index = {key: i for i, (key, _icon_name, _creator) in enumerate(self._page_creators())}
 
         # 更新网络信息
-        if current_index == 4:
+        if current_index == page_index["network"]:
             self.update_network_info()
-            
+
         # 更新磁盘IO信息
-        if current_index == 3:
+        if current_index == page_index["storage"]:
             self.update_disk_io_info()
-            
+
         # 更新启动时间
-        if current_index == 0:
+        if current_index == page_index["system"]:
             self.update_uptime()
-            
+
         # 更新分辨率信息
-        if current_index == 5:
+        if current_index == page_index["display"]:
             self.update_display_info()
 
         self.update_memory_info()
@@ -1889,7 +1923,93 @@ class HardwareManager(QMainWindow):
 
         self.update_physical_disks_label()
         return widget
-        
+
+    def create_motherboard_page(self):
+        """创建主板信息页面（信息口径与 deepin-devicemanager 的主板板块一致）"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
+        layout.setSpacing(self.scaled(10))
+
+        groups = self._motherboard_groups(self.get_motherboard_info())
+
+        if not groups:
+            layout.addWidget(QLabel(self.tr("Unable to get motherboard information")))
+
+        for title, rows in groups:
+            content = QWidget()
+            form_layout = QFormLayout()
+            form_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+            form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            form_layout.setHorizontalSpacing(self.scaled(15))
+            form_layout.setVerticalSpacing(self.scaled(8))
+
+            self._add_info_rows(form_layout, rows)
+
+            content.setLayout(form_layout)
+            layout.addWidget(self.create_group_box(title, content))
+
+        layout.addStretch()
+        return widget
+
+    def get_motherboard_info(self):
+        """获取主板 DMI 信息（读取逻辑见独立库 hardware_info/board_info.py）"""
+        empty = {"available": False, "source": "", "smbios_version": "", "chipset": "", "board": None, "sections": []}
+        if self.board_info_reader is None:
+            return empty
+        try:
+            return self.board_info_reader.get_all()
+        except Exception as e:
+            print(f"Get motherboard info failed: {e}")
+            return empty
+
+    def _board_tr(self, text):
+        """翻译主板字段名/区块名（翻译条目位于 BoardInfo 上下文）"""
+        if translate_board_text is not None:
+            return translate_board_text(text)
+        return text
+
+    def _motherboard_groups(self, info):
+        """把主板信息整理为 [(分组标题, [(名称, 值), ...]), ...]。
+
+        分组与字段口径和 deepin-devicemanager 主板板块一致：
+        主板自身信息（制造商/版本/芯片组 + 其余可展示字段），
+        以及 BIOS / 系统 / 机箱 / 内存插槽信息各区块。
+        """
+        groups = []
+        board = info.get("board")
+        if board:
+            rows = []
+            if board.get("vendor"):
+                rows.append((self._board_tr("Vendor"), board["vendor"]))
+            if board.get("version"):
+                rows.append((self._board_tr("Version"), board["version"]))
+            chipset = info.get("chipset") or ""
+            if chipset:
+                rows.append((self._board_tr("Chipset"), chipset))
+            rows.extend((self._board_tr(key), value) for key, value in board.get("fields") or [])
+            if rows:
+                groups.append((self._board_tr(board["title"]), rows))
+
+        for section in info.get("sections") or []:
+            rows = []
+            if section.get("vendor"):
+                rows.append((self._board_tr("Vendor"), section["vendor"]))
+            if section.get("version"):
+                rows.append((self._board_tr("Version"), section["version"]))
+            rows.extend((self._board_tr(key), value) for key, value in section.get("fields") or [])
+            if rows:
+                groups.append((self._board_tr(section["title"]), rows))
+        return groups
+
+    def _add_info_rows(self, form_layout, rows):
+        """向表单布局中添加“名称: 值”行（值过长时自动换行）"""
+        for label, value in rows:
+            value_label = QLabel(value)
+            value_label.setWordWrap(True)
+            value_label.setMinimumWidth(0)
+            form_layout.addRow(f"{label}:", value_label)
+
     def create_cpu_page(self):
         """创建CPU信息页面"""
         widget = QWidget()
