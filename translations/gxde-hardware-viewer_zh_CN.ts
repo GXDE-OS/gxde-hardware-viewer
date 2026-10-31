@@ -524,6 +524,84 @@
     </message>
   </context>
   <context>
+    <name>MemoryInfo</name>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="51" />
+      <source>Memory Modules</source>
+      <translation>内存模块</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="52" />
+      <source>Modules</source>
+      <translation>内存条</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="53" />
+      <source>Name</source>
+      <translation>名称</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="54" />
+      <source>Vendor</source>
+      <translation>制造商</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="55" />
+      <source>Size</source>
+      <translation>大小</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="56" />
+      <source>Type</source>
+      <translation>类型</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="57" />
+      <source>Speed</source>
+      <translation>速度</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="58" />
+      <source>Configured Speed</source>
+      <translation>配置速度</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="59" />
+      <source>Total Width</source>
+      <translation>总位宽</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="60" />
+      <source>Data Width</source>
+      <translation>数据位宽</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="61" />
+      <source>Locator</source>
+      <translation>插槽</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="62" />
+      <source>Serial Number</source>
+      <translation>序列号</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="63" />
+      <source>Configured Voltage</source>
+      <translation>配置电压</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="64" />
+      <source>Maximum Voltage</source>
+      <translation>最大电压</translation>
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="65" />
+      <source>Minimum Voltage</source>
+      <translation>最小电压</translation>
+    </message>
+  </context>
+  <context>
     <name>DriverChecker</name>
     <message>
       <location filename="../gxde-hardware-viewer.py" line="4110" />

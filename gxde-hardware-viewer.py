@@ -46,6 +46,13 @@ except ImportError:
     CpuInfo = None
     translate_cpu_text = None
 
+# 内存信息读取库（独立 py 库，便于复用与封装；安装后位于 /usr/share/gxde-hardware-viewer 下）
+try:
+    from hardware_info import MemoryInfo, translate_memory_text
+except ImportError:
+    MemoryInfo = None
+    translate_memory_text = None
+
 version = "2.7.2"
 
 uname = platform.uname()
@@ -2312,6 +2319,12 @@ class HardwareManager(QMainWindow):
             return translate_cpu_text(text)
         return text
 
+    def _mem_tr(self, text):
+        """翻译内存字段名（翻译条目位于 MemoryInfo 上下文）"""
+        if translate_memory_text is not None:
+            return translate_memory_text(text)
+        return text
+
     def create_memory_page(self):
         """创建内存信息页面"""
         widget = QWidget()
@@ -2351,6 +2364,11 @@ class HardwareManager(QMainWindow):
         
         mem_info.setLayout(mem_layout)
         layout.addWidget(self.create_group_box(self.tr("Memory Information"), mem_info))
+        
+        # 内存模块详细信息（逐条读取每个内存条，参考 deepin-devicemanager 内存板块）
+        mem_modules_widget = self.create_memory_modules_group()
+        if mem_modules_widget is not None:
+            layout.addWidget(mem_modules_widget)
         
         # 内存硬件和驱动信息
         mem_hw_info = self.get_memory_hardware_info()
@@ -3625,8 +3643,86 @@ class HardwareManager(QMainWindow):
             self.cache.set(cache_key, info, 60)
             return info
     
+    def create_memory_modules_group(self):
+        """构建“内存模块”分组：逐条展示每个内存条的完整信息（参考 deepin-devicemanager 内存板块）。
+
+        每个内存条显示：型号、制造商、大小、类型、速度、配置速度、总位宽、数据位宽、
+        插槽、序列号、配置电压、最大电压、最小电压。仅在成功读取到内存条信息时返回分组。
+        """
+        if MemoryInfo is None:
+            return None
+        info = MemoryInfo().get_all()
+        if not info.get("available"):
+            return None
+
+        # 内部字段 -> 翻译源串的映射（顺序即展示顺序）
+        field_order = [
+            ("name", "Name"),
+            ("vendor", "Vendor"),
+            ("size", "Size"),
+            ("type", "Type"),
+            ("speed", "Speed"),
+            ("configured_speed", "Configured Speed"),
+            ("total_width", "Total Width"),
+            ("data_width", "Data Width"),
+            ("locator", "Locator"),
+            ("serial_number", "Serial Number"),
+            ("configured_voltage", "Configured Voltage"),
+            ("max_voltage", "Maximum Voltage"),
+            ("min_voltage", "Minimum Voltage"),
+        ]
+
+        group = QWidget()
+        vlayout = QVBoxLayout(group)
+        vlayout.setContentsMargins(self.scaled(10), self.scaled(10), self.scaled(10), self.scaled(10))
+        vlayout.setSpacing(self.scaled(10))
+
+        # 总览：总容量 / 内存条数量
+        summary = []
+        if info.get("total_capacity"):
+            summary.append(f"{self._mem_tr('Size')}: {info['total_capacity']}")
+        if info.get("module_count"):
+            summary.append(f"{self._mem_tr('Modules')}: {info['module_count']}")
+        if summary:
+            sv = QLabel("    ".join(summary))
+            sv.setStyleSheet("color: palette(mid);")
+            vlayout.addWidget(sv)
+
+        # 逐条内存条
+        for idx, mod in enumerate(info.get("modules") or [], start=1):
+            if idx > 1:
+                sep = QFrame()
+                sep.setFrameShape(QFrame.Shape.HLine)
+                sep.setFrameShadow(QFrame.Shadow.Sunken)
+                sep.setStyleSheet("color: palette(mid);")
+                vlayout.addWidget(sep)
+
+            head = QLabel(f"{self._mem_tr('Memory Modules')} {idx}")
+            head.setStyleSheet(
+                "font-weight: bold; font-size: %dpx; padding: %dpx %dpx; "
+                "border: %dpx solid palette(mid); border-radius: 6px; "
+                "background-color: palette(alternate-base);"
+                % (int(13 * self.scaling_factor), self.scaled(6), self.scaled(10), max(1, self.scaled(1)))
+            )
+            vlayout.addWidget(head)
+
+            rows = []
+            for key, src in field_order:
+                value = mod.get(key)
+                if value:
+                    rows.append((self._mem_tr(src), value))
+            form = QFormLayout()
+            form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+            form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            form.setHorizontalSpacing(self.scaled(15))
+            form.setVerticalSpacing(self.scaled(8))
+            self._add_info_rows(form, rows)
+            vlayout.addLayout(form)
+
+        return self.create_group_box(self._mem_tr("Memory Modules"), group)
+
     def get_memory_hardware_info(self):
-        """获取内存硬件信息"""
+        """获取内存硬件信息（内存控制器与相关驱动模块）"""
         info = {}
         try:
             # 内存控制器信息
@@ -3637,26 +3733,6 @@ class HardwareManager(QMainWindow):
                 info[self.tr('Memory Controller')] = mem_ctrl_lines[0].split(': ', 2)[-1]
             else:
                 info[self.tr('Memory Controller')] = self.tr("Unknown")
-                
-            # 内存类型和大小 (从dmidecode获取，需要root权限)
-            try:
-                result = subprocess.run(['gxde-hardware-viewer-helper', 'memory'], capture_output=True, text=True)
-                output = result.stdout
-                
-                # 提取内存类型
-                for line in output.split('\n'):
-                    if 'Type:' in line and 'Unknown' not in line:
-                        info[self.tr('Memory Type')] = line.split(':')[1].strip()
-                        break
-                
-                # 提取内存速度
-                for line in output.split('\n'):
-                    if 'Speed:' in line and 'Unknown' not in line:
-                        info[self.tr('Memory Speed')] = line.split(':')[1].strip()
-                        break
-            except:
-                info[self.tr('Memory Type')] = self.tr("Requires root privileges to view")
-                info[self.tr('Memory Speed')] = self.tr("Requires root privileges to view")
                 
             # 内存驱动模块
             result = subprocess.run(['lsmod'], capture_output=True, text=True)

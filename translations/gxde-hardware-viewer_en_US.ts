@@ -522,6 +522,84 @@
     </message>
   </context>
   <context>
+    <name>MemoryInfo</name>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="51" />
+      <source>Memory Modules</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="52" />
+      <source>Modules</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="53" />
+      <source>Name</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="54" />
+      <source>Vendor</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="55" />
+      <source>Size</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="56" />
+      <source>Type</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="57" />
+      <source>Speed</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="58" />
+      <source>Configured Speed</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="59" />
+      <source>Total Width</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="60" />
+      <source>Data Width</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="61" />
+      <source>Locator</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="62" />
+      <source>Serial Number</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="63" />
+      <source>Configured Voltage</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="64" />
+      <source>Maximum Voltage</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <location filename="../hardware_info/memory_info.py" line="65" />
+      <source>Minimum Voltage</source>
+      <translation type="unfinished" />
+    </message>
+  </context>
+  <context>
     <name>DriverChecker</name>
     <message>
       <location filename="../gxde-hardware-viewer.py" line="4110" />
