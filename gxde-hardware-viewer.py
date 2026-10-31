@@ -53,7 +53,7 @@ except ImportError:
     MemoryInfo = None
     translate_memory_text = None
 
-version = "2.7.2"
+version = "2.7.5"
 
 uname = platform.uname()
 
