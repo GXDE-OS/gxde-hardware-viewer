@@ -1,6 +1,6 @@
 build:
-	pylupdate6 gxde-hardware-viewer.py hardware_info/board_info.py hardware_info/cdrom_info.py -ts translations/gxde-hardware-viewer_en_US.ts
-	pylupdate6 gxde-hardware-viewer.py hardware_info/board_info.py hardware_info/cdrom_info.py -ts translations/gxde-hardware-viewer_zh_CN.ts
+	pylupdate6 gxde-hardware-viewer.py hardware_info/board_info.py hardware_info/cdrom_info.py hardware_info/cpu_info.py -ts translations/gxde-hardware-viewer_en_US.ts
+	pylupdate6 gxde-hardware-viewer.py hardware_info/board_info.py hardware_info/cdrom_info.py hardware_info/cpu_info.py -ts translations/gxde-hardware-viewer_zh_CN.ts
 	bash translate_generation.sh
 
 install:

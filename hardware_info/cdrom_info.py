@@ -123,14 +123,37 @@ def tr(text):
 
 
 def register_translatable_keys():
-    """登记本库全部可翻译字符串，供 pylupdate6 提取（运行时无实际作用）。"""
+    """登记本库全部可翻译字符串，供 pylupdate6 提取（运行时无实际作用）。
+
+    注意：必须使用字面量字符串调用 ``translate``，pylupdate6 才能扫描到
+    ``CdromInfo`` 上下文下的各个条目；用变量（如循环中的 label）不会被提取，
+    会导致已翻译条目被标记为 vanished 而从 .qm 中丢失。
+    """
     if QCoreApplication is None:
         return
     QCoreApplication.translate("CdromInfo", "Optical Drive")
-    for label, _key in BASE_FIELDS:
-        QCoreApplication.translate("CdromInfo", label)
-    for label, _key in OTHER_FIELDS:
-        QCoreApplication.translate("CdromInfo", label)
+    QCoreApplication.translate("CdromInfo", "Name")
+    QCoreApplication.translate("CdromInfo", "Vendor")
+    QCoreApplication.translate("CdromInfo", "Model")
+    QCoreApplication.translate("CdromInfo", "Version")
+    QCoreApplication.translate("CdromInfo", "Bus Info")
+    QCoreApplication.translate("CdromInfo", "Capabilities")
+    QCoreApplication.translate("CdromInfo", "Driver")
+    QCoreApplication.translate("CdromInfo", "Maximum Power")
+    QCoreApplication.translate("CdromInfo", "Speed")
+    QCoreApplication.translate("CdromInfo", "Module Alias")
+    QCoreApplication.translate("CdromInfo", "Physical ID")
+    QCoreApplication.translate("CdromInfo", "Driver Modules")
+    QCoreApplication.translate("CdromInfo", "Device File")
+    QCoreApplication.translate("CdromInfo", "Device Files")
+    QCoreApplication.translate("CdromInfo", "Device Number")
+    QCoreApplication.translate("CdromInfo", "Config Status")
+    QCoreApplication.translate("CdromInfo", "Drive Status")
+    QCoreApplication.translate("CdromInfo", "Serial ID")
+    QCoreApplication.translate("CdromInfo", "Logical Name")
+    QCoreApplication.translate("CdromInfo", "Ansi Version")
+    QCoreApplication.translate("CdromInfo", "Application")
+    QCoreApplication.translate("CdromInfo", "Status")
 
 
 class CdromInfo:

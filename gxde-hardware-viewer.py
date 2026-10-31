@@ -13,7 +13,7 @@ import os
 import glob
 import time
 from datetime import datetime
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QScrollArea, QAbstractScrollArea, QAbstractButton, QVBoxLayout, 
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QScrollArea, QAbstractScrollArea, QAbstractButton, QVBoxLayout, QSizePolicy, 
                             QHBoxLayout, QListWidget, QListWidgetItem, QStackedWidget,
                             QLabel, QGroupBox, QFormLayout, QTextEdit, QFileDialog, 
                             QTableWidget, QTableWidgetItem, QProgressBar, QFrame,
@@ -38,6 +38,13 @@ try:
 except ImportError:
     CdromInfo = None
     translate_cdrom_text = None
+
+# 处理器信息读取库（独立 py 库，便于复用与封装；安装后位于 /usr/share/gxde-hardware-viewer 下）
+try:
+    from hardware_info import CpuInfo, translate_cpu_text
+except ImportError:
+    CpuInfo = None
+    translate_cpu_text = None
 
 version = "2.7.2"
 
@@ -951,6 +958,8 @@ class HardwareManager(QMainWindow):
         self.board_info_reader = BoardInfo() if BoardInfo is not None else None
         # 光驱信息读取器（独立库，带缓存）
         self.cdrom_reader = CdromInfo() if CdromInfo is not None else None
+        # 处理器信息读取器（独立库，带缓存）
+        self.cpu_reader = CpuInfo() if CpuInfo is not None else None
     
         # 初始化缩放因子
         self.init_scaling_factor()
@@ -1537,15 +1546,31 @@ class HardwareManager(QMainWindow):
             
             # CPU信息
             cpu_freq = self.get_cpu_freq_info()
-            info[self.tr("CPU Info")] = {
-                self.tr("Processor Model"): self.get_cpu_model(),
-                self.tr("Architecture"): platform.machine(),
-                self.tr("Physical Cores"): psutil.cpu_count(logical=False) or 0,
-                self.tr("Logical Cores"): psutil.cpu_count(logical=True) or 0,
+            cpu_extra = self.get_cpu_info()
+            cpu_info = {
+                self.tr("Processor Model"): cpu_extra.get("name") or self.get_cpu_model(),
+                self._cpu_tr("Vendor"): cpu_extra.get("vendor") or self.tr("Unknown"),
+                self.tr("Architecture"): cpu_extra.get("architecture") or platform.machine(),
+                self.tr("Physical Cores"): cpu_extra.get("cores") or psutil.cpu_count(logical=False) or 0,
+                self.tr("Logical Cores"): cpu_extra.get("logical_cpus") or psutil.cpu_count(logical=True) or 0,
+                self._cpu_tr("Threads"): cpu_extra.get("threads_per_core") or self.tr("Unknown"),
                 self.tr("Current Frequency"): f"{cpu_freq['current']:.2f} MHz" if cpu_freq['current'] else self.tr("Unknown"),
                 self.tr("Maximum Frequency"): f"{cpu_freq['max']:.2f} MHz" if cpu_freq['max'] else self.tr("Unknown"),
                 self.tr("Minimum Frequency"): f"{cpu_freq['min']:.2f} MHz" if cpu_freq['min'] else self.tr("Unknown")
             }
+            # 补充 deepin-devicemanager 处理器板块的其余条目
+            for label, key in [
+                ("CPU Family", "cpu_family"),
+                ("Model", "model"),
+                ("Virtualization", "virtualization"),
+                ("Flags", "flags"),
+                ("Extensions", "extensions"),
+                ("Stepping", "stepping"),
+            ]:
+                value = cpu_extra.get(key) or ""
+                if value:
+                    cpu_info[self._cpu_tr(label)] = value
+            info[self.tr("CPU Info")] = cpu_info
             
             # 内存信息
             mem = psutil.virtual_memory()
@@ -1784,6 +1809,49 @@ class HardwareManager(QMainWindow):
         layout.addWidget(widget)
         group.setLayout(layout)
         return group
+
+    def _create_collapsible(self, title, content_widget):
+        """创建可点击展开的折叠分组。
+
+        收起时只显示带粗略信息的标题，点击标题可展开/收起内容（隐藏而非禁用）。
+        标题使用醒目的带箭头按钮，点击后箭头方向翻转。
+        """
+        container = QWidget()
+        vlayout = QVBoxLayout(container)
+        vlayout.setContentsMargins(0, 0, 0, 0)
+        vlayout.setSpacing(self.scaled(4))
+
+        header = QToolButton()
+        header.setText(title)
+        header.setCheckable(True)
+        header.setChecked(False)
+        header.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        header.setArrowType(Qt.ArrowType.RightArrow)
+        header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        font = header.font()
+        font.setBold(True)
+        font.setPointSizeF(font.pointSizeF() * self.scaling_factor)
+        header.setFont(font)
+        header.setStyleSheet(
+            "QToolButton { text-align: left; padding: %dpx %dpx; "
+            "border: %dpx solid palette(mid); border-radius: 6px; "
+            "background-color: palette(alternate-base); }"
+            "QToolButton:hover { background-color: palette(highlight); "
+            "color: palette(highlighted-text); }"
+            % (self.scaled(10), self.scaled(12), max(1, self.scaled(1)))
+        )
+        content_widget.setHidden(True)
+
+        def _toggle(checked):
+            content_widget.setHidden(not checked)
+            header.setArrowType(Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow)
+
+        header.toggled.connect(_toggle)
+        _toggle(False)
+
+        vlayout.addWidget(header)
+        vlayout.addWidget(content_widget)
+        return container
 
     def create_page_button(self, text):
         """创建页面标准按钮
@@ -2082,11 +2150,12 @@ class HardwareManager(QMainWindow):
         cpu_base_layout.setHorizontalSpacing(self.scaled(15))
         cpu_base_layout.setVerticalSpacing(self.scaled(8))
         
-        # 获取CPU详细信息
-        cpu_model = self.get_cpu_model()
-        cpu_arch = platform.machine()
-        cpu_count = psutil.cpu_count(logical=False) or 0
-        logical_cpu = psutil.cpu_count(logical=True) or 0
+        # 获取CPU详细信息（名称/架构/核数优先取独立库，读不到时回退原有方式）
+        info = self.get_cpu_info()
+        cpu_model = info.get("name") or self.get_cpu_model()
+        cpu_arch = info.get("architecture") or platform.machine()
+        cpu_count = info.get("cores") or psutil.cpu_count(logical=False) or 0
+        logical_cpu = info.get("logical_cpus") or psutil.cpu_count(logical=True) or 0
         
         # 处理CPU频率信息
         cpu_freq = self.get_cpu_freq_info()
@@ -2098,15 +2167,63 @@ class HardwareManager(QMainWindow):
         self.cpu_current_freq_label = QLabel(current_freq)
         
         cpu_base_layout.addRow(self.tr("Processor Model:"), QLabel(cpu_model))
+        cpu_base_layout.addRow(f"{self._cpu_tr('Vendor')}:", QLabel(info.get("vendor") or self.tr("Unknown")))
         cpu_base_layout.addRow(self.tr("Architecture:"), QLabel(cpu_arch))
         cpu_base_layout.addRow(self.tr("Physical Cores:"), QLabel(str(cpu_count)))
         cpu_base_layout.addRow(self.tr("Logical Cores:"), QLabel(str(logical_cpu)))
+        cpu_base_layout.addRow(f"{self._cpu_tr('Threads')}:", QLabel(info.get("threads_per_core") or self.tr("Unknown")))
         cpu_base_layout.addRow(self.tr("Current Frequency:"), self.cpu_current_freq_label)
         cpu_base_layout.addRow(self.tr("Maximum Frequency:"), QLabel(max_freq))
         cpu_base_layout.addRow(self.tr("Minimum Frequency:"), QLabel(min_freq))
         
         cpu_base.setLayout(cpu_base_layout)
         layout.addWidget(self.create_group_box(self.tr("Basic Information"), cpu_base))
+
+        # 缓存信息（L1/L2/L3，来自 lscpu）
+        cache_rows = []
+        for label, key in [
+            ("L1 Instruction Cache", "l1i_cache"),
+            ("L1 Data Cache", "l1d_cache"),
+            ("L2 Cache", "l2_cache"),
+            ("L3 Cache", "l3_cache"),
+        ]:
+            value = info.get(key) or ""
+            if value:
+                cache_rows.append((self._cpu_tr(label), value))
+        if cache_rows:
+            cache_widget = QWidget()
+            cache_layout = QFormLayout()
+            cache_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+            cache_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            cache_layout.setHorizontalSpacing(self.scaled(15))
+            cache_layout.setVerticalSpacing(self.scaled(8))
+            self._add_info_rows(cache_layout, cache_rows)
+            cache_widget.setLayout(cache_layout)
+            layout.addWidget(self.create_group_box(self._cpu_tr("Cache Information"), cache_widget))
+
+        # CPU详细信息（deepin-devicemanager 处理器板块中的其余条目）
+        detail_rows = []
+        for label, key in [
+            ("CPU Family", "cpu_family"),
+            ("Model", "model"),
+            ("Virtualization", "virtualization"),
+            ("Flags", "flags"),
+            ("Extensions", "extensions"),
+            ("Stepping", "stepping"),
+        ]:
+            value = info.get(key) or ""
+            if value:
+                detail_rows.append((self._cpu_tr(label), value))
+        if detail_rows:
+            detail_widget = QWidget()
+            detail_layout = QFormLayout()
+            detail_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+            detail_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            detail_layout.setHorizontalSpacing(self.scaled(15))
+            detail_layout.setVerticalSpacing(self.scaled(8))
+            self._add_info_rows(detail_layout, detail_rows)
+            detail_widget.setLayout(detail_layout)
+            layout.addWidget(self.create_group_box(self.tr("CPU Details"), detail_widget))
         
         # CPU驱动信息
         cpu_drivers = self.get_cpu_driver_info()
@@ -2125,10 +2242,76 @@ class HardwareManager(QMainWindow):
         
         driver_widget.setLayout(driver_layout)
         layout.addWidget(self.create_group_box(self.tr("CPU Driver Information"), driver_widget))
-        
+
+        # 各核心详细信息（大小核等异质芯片逐核完整读取；统一折叠，点击一次性展开/收起全部核心）
+        per_core_info = info.get("per_core_info") or []
+        if per_core_info:
+            core_title = f"{self._cpu_tr('Per-core Information')} (×{logical_cpu})"
+            core_inner = QWidget()
+            cv = QVBoxLayout(core_inner)
+            cv.setContentsMargins(self.scaled(10), self.scaled(10), self.scaled(10), self.scaled(10))
+            cv.setSpacing(self.scaled(12))
+
+            for core in per_core_info:
+                head = QLabel(f"{self._cpu_tr('Logical Processor')} {core.get('processor', '')}")
+                head.setStyleSheet("font-weight: bold;")
+                cv.addWidget(head)
+
+                rows = []
+                if core.get("model_name"):
+                    rows.append((self._cpu_tr("Core Model"), core["model_name"]))
+                if core.get("cpu_family"):
+                    rows.append((self._cpu_tr("CPU Family"), core["cpu_family"]))
+                if core.get("model"):
+                    rows.append((self._cpu_tr("Model"), core["model"]))
+                if core.get("stepping"):
+                    rows.append((self._cpu_tr("Stepping"), core["stepping"]))
+                if core.get("vendor"):
+                    rows.append((self._cpu_tr("Vendor"), core["vendor"]))
+                if core.get("frequency"):
+                    rows.append((self._cpu_tr("Core Frequency"), core["frequency"]))
+                if core.get("extensions"):
+                    rows.append((self._cpu_tr("Extensions"), core["extensions"]))
+                if core.get("flags"):
+                    rows.append((self._cpu_tr("Flags"), core["flags"]))
+                form = QFormLayout()
+                form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+                form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                form.setHorizontalSpacing(self.scaled(15))
+                form.setVerticalSpacing(self.scaled(8))
+                self._add_info_rows(form, rows)
+                cv.addLayout(form)
+
+            layout.addWidget(self._create_collapsible(core_title, core_inner))
+
         layout.addStretch()
         return widget
         
+    def get_cpu_info(self):
+        """获取处理器信息（读取逻辑见独立库 hardware_info/cpu_info.py）"""
+        empty = {
+            "available": False, "source": "",
+            "name": "", "vendor": "", "architecture": "", "cpu_family": "",
+            "model": "", "stepping": "", "extensions": "", "virtualization": "",
+            "flags": "", "threads_per_core": "",
+            "cores": None, "logical_cpus": None,
+            "per_core": [], "core_types": [],
+            "base": [], "other": [],
+        }
+        if self.cpu_reader is None:
+            return empty
+        try:
+            return self.cpu_reader.get_all()
+        except Exception as e:
+            print(f"Get cpu info failed: {e}")
+            return empty
+
+    def _cpu_tr(self, text):
+        """翻译处理器字段名（翻译条目位于 CpuInfo 上下文）"""
+        if translate_cpu_text is not None:
+            return translate_cpu_text(text)
+        return text
+
     def create_memory_page(self):
         """创建内存信息页面"""
         widget = QWidget()
