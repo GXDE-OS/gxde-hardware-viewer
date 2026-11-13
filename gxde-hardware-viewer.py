@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QScrollArea, QA
                             QPushButton, QMenu, QMessageBox, QAbstractItemView, QDialog, QDialogButtonBox, QToolButton)
 from PyQt6.QtWidgets import QGraphicsDropShadowEffect
 from PyQt6.QtCore import Qt, QTimer, QTranslator, QCoreApplication, QLocale, QThread, pyqtSignal, QProcess, QSettings, QRect, QRectF, QPoint, QEvent, QSize
-from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFontMetrics, QPainterPath, QPen, QCursor
+from PyQt6.QtGui import QColor, QIcon, QFont, QPainter, QPalette, QPixmap, QFontMetrics, QPainterPath, QPen, QCursor, QGuiApplication
 from enum import Enum
 import dbus
 
@@ -87,6 +87,22 @@ class ThemeColor:
         """转为 Qt 样式表可用的 CSS 颜色字符串（含透明度）"""
         r, g, b, a = color.getRgb()
         return f"rgba({r}, {g}, {b}, {a})"
+
+def is_wayland_session() -> bool:
+    """判断当前是否运行在 Wayland 会话（含通过 XWayland 运行的 Qt 窗口）。
+
+    Wayland 合成器会自行绘制窗口阴影和装饰，应用再自绘一层客户端阴影时，
+    四周预留的透明区域会被合成器显示成一圈比窗口大一圈的半透明边框。
+    """
+    try:
+        if "wayland" in (QGuiApplication.platformName() or "").lower():
+            return True
+    except Exception:
+        pass
+    return (
+        os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
+        or bool(os.environ.get("WAYLAND_DISPLAY"))
+    )
 
 def get_scaling_factor() -> float:
     """获取屏幕逻辑 DPI 对应的缩放因子（与主窗口 init_scaling_factor 一致）"""
@@ -951,10 +967,15 @@ class HardwareManager(QMainWindow):
     _SHADOW_INACTIVE_COLOR = QColor(0, 0, 0, int(255 * 0.15))
     # 窗口边缘可拖拽调整大小的区域宽度（像素）
     _RESIZE_MARGIN = 8
+    # 是否自绘客户端阴影；__init__ 中按会话类型覆盖（Wayland 下关闭）
+    client_shadow_enabled = True
 
     def __init__(self):
         super().__init__()
-    
+
+        # Wayland 下由合成器提供窗口阴影，不再自绘客户端阴影及透明留白
+        self.client_shadow_enabled = not is_wayland_session()
+
         # 初始化变量
         self.cache = CacheManager()
         self.translator = QTranslator(self)
@@ -1050,6 +1071,9 @@ class HardwareManager(QMainWindow):
         return SettingsUtils().get_window_radius()
 
     def _normal_shadow_margins(self):
+        # Wayland 由合成器绘制阴影，窗口不再为自绘阴影预留透明区域
+        if not self.client_shadow_enabled:
+            return (0, 0, 0, 0)
         extent = self._SHADOW_RADIUS + self._SHADOW_BORDER
         return (
             extent - self._SHADOW_OFFSET.x(),
@@ -1062,7 +1086,7 @@ class HardwareManager(QMainWindow):
         effect = getattr(self, 'window_shadow', None)
         maximized = self.isMaximized() or self.isFullScreen()
 
-        if maximized:
+        if maximized or not self.client_shadow_enabled:
             self.setContentsMargins(0, 0, 0, 0)
             if effect is not None:
                 effect.setEnabled(False)
@@ -1342,13 +1366,16 @@ class HardwareManager(QMainWindow):
         central_widget = CentralWidget()
         self.setCentralWidget(central_widget)
 
-        self.window_shadow = QGraphicsDropShadowEffect(self)
-        self.window_shadow.setBlurRadius(self._SHADOW_RADIUS)
-        self.window_shadow.setOffset(
-            self._SHADOW_OFFSET.x(), self._SHADOW_OFFSET.y()
-        )
-        self.window_shadow.setColor(self._SHADOW_INACTIVE_COLOR)
-        central_widget.setGraphicsEffect(self.window_shadow)
+        # Wayland 合成器自带窗口阴影；再叠加一层客户端阴影会让透明留白
+        # 显示成窗口外围一圈半透明边框，因此仅在非 Wayland 会话自绘
+        if self.client_shadow_enabled:
+            self.window_shadow = QGraphicsDropShadowEffect(self)
+            self.window_shadow.setBlurRadius(self._SHADOW_RADIUS)
+            self.window_shadow.setOffset(
+                self._SHADOW_OFFSET.x(), self._SHADOW_OFFSET.y()
+            )
+            self.window_shadow.setColor(self._SHADOW_INACTIVE_COLOR)
+            central_widget.setGraphicsEffect(self.window_shadow)
     
         # 主布局
         main_layout = QVBoxLayout(central_widget)
@@ -4394,21 +4421,25 @@ class AboutDialog(QDialog):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
-        # 外层留白用于绘制阴影
+        # Wayland 合成器自带窗口阴影，不留透明阴影区域，避免窗口外围
+        # 出现一圈半透明边框；X11 等会话仍保留自绘阴影
+        client_shadow = not is_wayland_session()
+        shadow_margin = self.scaled(20) if client_shadow else 0
         outer = QVBoxLayout(self)
         outer.setContentsMargins(
-            self.scaled(20), self.scaled(20), self.scaled(20), self.scaled(20)
+            shadow_margin, shadow_margin, shadow_margin, shadow_margin
         )
 
         container = AboutDialogContainer(self, self._radius)
         # 让容器内的按钮也能拿到缩放因子
         container.scaling_factor = self.scaling_factor
 
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(self.scaled(24))
-        shadow.setOffset(0, self.scaled(3))
-        shadow.setColor(QColor(0, 0, 0, 80))
-        container.setGraphicsEffect(shadow)
+        if client_shadow:
+            shadow = QGraphicsDropShadowEffect(self)
+            shadow.setBlurRadius(self.scaled(24))
+            shadow.setOffset(0, self.scaled(3))
+            shadow.setColor(QColor(0, 0, 0, 80))
+            container.setGraphicsEffect(shadow)
         outer.addWidget(container)
 
         # 主题相关配色（对应 DAboutDialog 的亮/暗色主题）
