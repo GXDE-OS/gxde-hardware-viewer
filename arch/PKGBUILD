@@ -1,5 +1,5 @@
 # Maintainer: CharOfString <root@charofstring.cc>
-pkgname=gxde-hardware-viewer-git
+pkgname=gxde-hardware-viewer
 pkgver=2.7.5
 pkgrel=1
 pkgdesc='Hardware information viewer for GXDE'
@@ -17,8 +17,9 @@ optdepends=('mesa-utils: OpenGL renderer details'
             'ethtool: network adapter details'
             'alsa-utils: audio device details'
             'nvidia-utils: NVIDIA GPU details')
-provides=('gxde-hardware-viewer')
-conflicts=('gxde-hardware-viewer')
+provides=("gxde-hardware-viewer-git=$pkgver")
+conflicts=('gxde-hardware-viewer-git')
+replaces=('gxde-hardware-viewer-git')
 source=()
 sha512sums=()
 
