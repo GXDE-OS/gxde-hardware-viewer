@@ -53,6 +53,12 @@ except ImportError:
     MemoryInfo = None
     translate_memory_text = None
 
+# 麦克风占用状态读取库（独立 py 库，安装后位于 /usr/share/gxde-hardware-viewer 下）
+try:
+    from hardware_info import get_microphone_usage
+except ImportError:
+    get_microphone_usage = None
+
 version = "2.7.5"
 
 uname = platform.uname()
@@ -982,6 +988,7 @@ class HardwareManager(QMainWindow):
         self.current_lang = "en"
         self.net_io_labels = {}
         self.disk_io_labels = {}
+        self.microphone_status_label = None
         # 主板信息读取器（独立库，带缓存）
         self.board_info_reader = BoardInfo() if BoardInfo is not None else None
         # 光驱信息读取器（独立库，带缓存）
@@ -1543,6 +1550,7 @@ class HardwareManager(QMainWindow):
     def refresh_all_pages(self):
         """刷新所有页面以更新翻译"""
         current_index = self.stack.currentIndex()
+        self.microphone_status_label = None
 
         while self.stack.count() > 0:
             widget = self.stack.widget(0)
@@ -1819,6 +1827,10 @@ class HardwareManager(QMainWindow):
         # 更新分辨率信息
         if current_index == page_index["display"]:
             self.update_display_info()
+
+        # 更新麦克风占用状态
+        if current_index == page_index["sound"]:
+            self.update_microphone_status()
 
         self.update_memory_info()
     
@@ -2802,6 +2814,13 @@ class HardwareManager(QMainWindow):
 
         for device in sound_info.get('input', []):
             sound_layout.addWidget(QLabel(self.tr("  - {} (Driver: {})").format(device['name'], device['driver'])))
+
+        # 麦克风占用状态（由系统服务提供，定时刷新）
+        self.microphone_status_label = QLabel(self.tr("Microphone status: Unknown"))
+        self.microphone_status_label.setWordWrap(True)
+        self.microphone_status_label.setMinimumWidth(0)
+        sound_layout.addWidget(self.microphone_status_label)
+        self.update_microphone_status()
 
         sound_widget.setLayout(sound_layout)
         layout.addWidget(self.create_group_box(self.tr("Audio Devices & Drivers"), sound_widget))
@@ -3958,6 +3977,24 @@ class HardwareManager(QMainWindow):
         except Exception as e:
             return {self.tr('Error'): self.tr('Unable to get display driver information: {}').format(str(e))}
         
+    def update_microphone_status(self):
+        """刷新声音页面上的麦克风占用状态"""
+        label = getattr(self, "microphone_status_label", None)
+        if label is None:
+            return
+
+        reader = get_microphone_usage
+        in_use, processes = reader() if reader is not None else (None, [])
+        if in_use is None:
+            text = self.tr("Microphone status: Unknown")
+        elif in_use:
+            text = self.tr("Microphone status: In use")
+            if processes:
+                text += " - " + self.tr("Processes: {}").format(", ".join(processes))
+        else:
+            text = self.tr("Microphone status: Idle")
+        label.setText(text)
+
     def get_sound_devices_info(self):
         """获取声音设备信息"""
         devices = {'output': [], 'input': []}

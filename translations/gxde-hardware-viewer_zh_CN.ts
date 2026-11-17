@@ -1738,6 +1738,22 @@ Please save all your open documents before restarting the system.</source>
       <translation>耳机麦克风</translation>
     </message>
     <message>
+      <source>Microphone status: Unknown</source>
+      <translation>麦克风状态：未知</translation>
+    </message>
+    <message>
+      <source>Microphone status: In use</source>
+      <translation>麦克风状态：占用中</translation>
+    </message>
+    <message>
+      <source>Microphone status: Idle</source>
+      <translation>麦克风状态：空闲</translation>
+    </message>
+    <message>
+      <source>Processes: {}</source>
+      <translation>占用进程：{}</translation>
+    </message>
+    <message>
       <location filename="../gxde-hardware-viewer.py" line="3913" />
       <location filename="../gxde-hardware-viewer.py" line="3911" />
       <location filename="../gxde-hardware-viewer.py" line="3908" />

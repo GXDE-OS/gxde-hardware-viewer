@@ -1726,6 +1726,22 @@ Please save all your open documents before restarting the system.</source>
       <translation type="unfinished" />
     </message>
     <message>
+      <source>Microphone status: Unknown</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Microphone status: In use</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Microphone status: Idle</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Processes: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
       <location filename="../gxde-hardware-viewer.py" line="3913" />
       <location filename="../gxde-hardware-viewer.py" line="3911" />
       <location filename="../gxde-hardware-viewer.py" line="3908" />
