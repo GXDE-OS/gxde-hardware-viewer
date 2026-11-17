@@ -10,6 +10,7 @@ from .cdrom_info import CdromInfo, tr as translate_cdrom_text
 from .cpu_info import CpuInfo, tr as translate_cpu_text
 from .memory_info import MemoryInfo, tr as translate_memory_text
 from .microphone_info import get_microphone_usage
+from .camera_info import CameraInfo, get_camera_usage
 
 __all__ = [
     "BoardInfo", "translate_board_text",
@@ -17,4 +18,5 @@ __all__ = [
     "CpuInfo", "translate_cpu_text",
     "MemoryInfo", "translate_memory_text",
     "get_microphone_usage",
+    "CameraInfo", "get_camera_usage",
 ]

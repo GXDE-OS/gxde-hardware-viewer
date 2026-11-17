@@ -59,6 +59,12 @@ try:
 except ImportError:
     get_microphone_usage = None
 
+# 摄像头信息读取库（独立 py 库，安装后位于 /usr/share/gxde-hardware-viewer 下）
+try:
+    from hardware_info import CameraInfo
+except ImportError:
+    CameraInfo = None
+
 version = "2.7.5"
 
 uname = platform.uname()
@@ -989,12 +995,15 @@ class HardwareManager(QMainWindow):
         self.net_io_labels = {}
         self.disk_io_labels = {}
         self.microphone_status_label = None
+        self.camera_status_label = None
         # 主板信息读取器（独立库，带缓存）
         self.board_info_reader = BoardInfo() if BoardInfo is not None else None
         # 光驱信息读取器（独立库，带缓存）
         self.cdrom_reader = CdromInfo() if CdromInfo is not None else None
         # 处理器信息读取器（独立库，带缓存）
         self.cpu_reader = CpuInfo() if CpuInfo is not None else None
+        # 摄像头信息读取器（独立库，带缓存）
+        self.camera_reader = CameraInfo() if CameraInfo is not None else None
     
         # 初始化缩放因子
         self.init_scaling_factor()
@@ -1323,6 +1332,7 @@ class HardwareManager(QMainWindow):
             ("network", "network", self.create_network_page),
             ("display", "display", self.create_display_page),
             ("sound", "sound", self.create_sound_page),
+            ("camera", "camera", self.create_camera_page),
             ("input", "input_device", self.create_input_page),
             ("cdrom", "cdrom", self.create_cdrom_page),
             ("driver", "driver_update", self.create_driver_manage_page),
@@ -1352,6 +1362,7 @@ class HardwareManager(QMainWindow):
             "network": self.tr("Network"),
             "display": self.tr("Display"),
             "sound": self.tr("Sound"),
+            "camera": self.tr("Camera"),
             "input": self.tr("Input Devices"),
             "cdrom": self.tr("Optical Drive"),
             "driver": self.tr("Driver Manage"),
@@ -1551,6 +1562,7 @@ class HardwareManager(QMainWindow):
         """刷新所有页面以更新翻译"""
         current_index = self.stack.currentIndex()
         self.microphone_status_label = None
+        self.camera_status_label = None
 
         while self.stack.count() > 0:
             widget = self.stack.widget(0)
@@ -1831,6 +1843,10 @@ class HardwareManager(QMainWindow):
         # 更新麦克风占用状态
         if current_index == page_index["sound"]:
             self.update_microphone_status()
+
+        # 更新摄像头占用状态
+        if current_index == page_index["camera"]:
+            self.update_camera_status()
 
         self.update_memory_info()
     
@@ -2843,6 +2859,76 @@ class HardwareManager(QMainWindow):
         driver_widget.setLayout(driver_layout)
         layout.addWidget(self.create_group_box(self.tr("Audio Driver Details"), driver_widget))
         
+        layout.addStretch()
+        return widget
+
+    def create_camera_page(self):
+        """创建摄像头信息页面"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(self.scaled(15), self.scaled(15), self.scaled(15), self.scaled(15))
+        layout.setSpacing(self.scaled(10))
+
+        camera_info = self.get_camera_info()
+        camera_widget = QWidget()
+        camera_layout = QVBoxLayout(camera_widget)
+        camera_layout.setSpacing(self.scaled(6))
+
+        label = QLabel(self.tr("Camera Devices:"))
+        font = label.font()
+        font.setBold(True)
+        label.setFont(font)
+        camera_layout.addWidget(label)
+
+        def add_detail(text):
+            detail_label = QLabel(text)
+            detail_label.setWordWrap(True)
+            detail_label.setMinimumWidth(0)
+            camera_layout.addWidget(detail_label)
+
+        cameras = camera_info.get("cameras") or []
+        if cameras:
+            for camera in cameras:
+                name = camera.get("name") or self.tr("Unknown")
+                driver = camera.get("driver") or self.tr("Unknown")
+                add_detail(self.tr("  - {} (Driver: {})").format(name, driver))
+
+                nodes = camera.get("nodes") or []
+                if nodes:
+                    add_detail(self.tr("Device: {}").format(", ".join(nodes)))
+                camera_id = ":".join(
+                    part for part in (camera.get("vendor_id"), camera.get("product_id")) if part
+                )
+                if camera_id:
+                    add_detail(self.tr("ID: {}").format(camera_id))
+
+                bus = camera.get("bus_info") or camera.get("bus")
+                if bus:
+                    add_detail(self.tr("Bus info: {}").format(bus))
+                if camera.get("dev"):
+                    add_detail(self.tr("Device number: {}").format(camera["dev"]))
+                if camera.get("usb_version"):
+                    add_detail(self.tr("USB version: {}").format(camera["usb_version"]))
+                if camera.get("driver_version"):
+                    add_detail(self.tr("Driver version: {}").format(camera["driver_version"]))
+
+                capabilities = camera.get("capabilities") or camera.get("device_caps") or []
+                if capabilities:
+                    add_detail(self.tr("Capabilities: {}").format(", ".join(capabilities)))
+                formats = camera.get("formats") or []
+                if formats:
+                    add_detail(self.tr("Formats: {}").format(", ".join(formats)))
+        else:
+            add_detail(self.tr("No camera detected"))
+
+        self.camera_status_label = QLabel(self.tr("Camera status: Unknown"))
+        self.camera_status_label.setWordWrap(True)
+        self.camera_status_label.setMinimumWidth(0)
+        camera_layout.addWidget(self.camera_status_label)
+        self.update_camera_status()
+
+        camera_widget.setLayout(camera_layout)
+        layout.addWidget(self.create_group_box(self.tr("Camera Devices & Status"), camera_widget))
         layout.addStretch()
         return widget
         
@@ -3993,6 +4079,37 @@ class HardwareManager(QMainWindow):
                 text += " - " + self.tr("Processes: {}").format(", ".join(processes))
         else:
             text = self.tr("Microphone status: Idle")
+        label.setText(text)
+
+    def get_camera_info(self):
+        """获取摄像头信息（读取逻辑见独立库 hardware_info/camera_info.py）。"""
+        if self.camera_reader is None:
+            return {"available": False, "source": "", "cameras": []}
+        try:
+            return self.camera_reader.get_all()
+        except Exception as e:
+            print(f"Failed to get camera information: {e}")
+            return {"available": False, "source": "", "cameras": []}
+
+    def update_camera_status(self):
+        """刷新摄像头页面上的占用状态"""
+        label = getattr(self, "camera_status_label", None)
+        if label is None:
+            return
+
+        if self.camera_reader is not None:
+            in_use, processes = self.camera_reader.get_usage()
+        else:
+            in_use, processes = None, []
+
+        if in_use is None:
+            text = self.tr("Camera status: Unknown")
+        elif in_use:
+            text = self.tr("Camera status: In use")
+            if processes:
+                text += " - " + self.tr("Processes: {}").format(", ".join(processes))
+        else:
+            text = self.tr("Camera status: Idle")
         label.setText(text)
 
     def get_sound_devices_info(self):

@@ -653,6 +653,10 @@
       <translation>声音</translation>
     </message>
     <message>
+      <source>Camera</source>
+      <translation>摄像头</translation>
+    </message>
+    <message>
       <location filename="../gxde-hardware-viewer.py" line="1317" />
       <source>Input Devices</source>
       <translation>输入设备</translation>
@@ -1752,6 +1756,62 @@ Please save all your open documents before restarting the system.</source>
     <message>
       <source>Processes: {}</source>
       <translation>占用进程：{}</translation>
+    </message>
+    <message>
+      <source>Camera Devices:</source>
+      <translation>摄像头设备：</translation>
+    </message>
+    <message>
+      <source>Camera Devices &amp; Status</source>
+      <translation>摄像头设备与状态</translation>
+    </message>
+    <message>
+      <source>Device: {}</source>
+      <translation>设备：{}</translation>
+    </message>
+    <message>
+      <source>ID: {}</source>
+      <translation>ID：{}</translation>
+    </message>
+    <message>
+      <source>Bus info: {}</source>
+      <translation>总线信息：{}</translation>
+    </message>
+    <message>
+      <source>Device number: {}</source>
+      <translation>设备号：{}</translation>
+    </message>
+    <message>
+      <source>USB version: {}</source>
+      <translation>USB 版本：{}</translation>
+    </message>
+    <message>
+      <source>Driver version: {}</source>
+      <translation>驱动版本：{}</translation>
+    </message>
+    <message>
+      <source>Capabilities: {}</source>
+      <translation>功能：{}</translation>
+    </message>
+    <message>
+      <source>Formats: {}</source>
+      <translation>格式：{}</translation>
+    </message>
+    <message>
+      <source>No camera detected</source>
+      <translation>未检测到摄像头</translation>
+    </message>
+    <message>
+      <source>Camera status: Unknown</source>
+      <translation>摄像头状态：未知</translation>
+    </message>
+    <message>
+      <source>Camera status: In use</source>
+      <translation>摄像头状态：占用中</translation>
+    </message>
+    <message>
+      <source>Camera status: Idle</source>
+      <translation>摄像头状态：空闲</translation>
     </message>
     <message>
       <location filename="../gxde-hardware-viewer.py" line="3913" />

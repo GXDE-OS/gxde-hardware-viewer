@@ -651,6 +651,10 @@
       <translation type="unfinished" />
     </message>
     <message>
+      <source>Camera</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
       <location filename="../gxde-hardware-viewer.py" line="1317" />
       <source>Input Devices</source>
       <translation type="unfinished" />
@@ -1739,6 +1743,62 @@ Please save all your open documents before restarting the system.</source>
     </message>
     <message>
       <source>Processes: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Camera Devices:</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Camera Devices &amp; Status</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Device: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>ID: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Bus info: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Device number: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>USB version: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Driver version: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Capabilities: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Formats: {}</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>No camera detected</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Camera status: Unknown</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Camera status: In use</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Camera status: Idle</source>
       <translation type="unfinished" />
     </message>
     <message>
